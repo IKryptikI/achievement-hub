@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Achievement Hub: achievements for the PC games that never had them</title>
+<meta name="description" content="Achievement Hub adds achievements, a Gamerscore and an Xbox 360-style overlay to classic PC games. Free and open source.">
+<meta name="theme-color" content="#070b10">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Achievement Hub: achievements for the PC games that never had them">
+<meta property="og:description" content="Achievement Hub adds achievements, a Gamerscore and an Xbox 360-style overlay to classic PC games. Free and open source.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main>
+<div class="hero"><div class="wrap hero-grid">
+  <div>
+    <h1>Achievements for the PC games <span class="shine">that never had them.</span></h1>
+    <p class="lead">Resident Evil. Silent Hill. Fallout 3. Oblivion. Achievement Hub brings their console achievements to the PC versions you already own, with pop-ups, a Gamerscore and a dashboard right inside the game.</p>
+    <div class="row"><a class="btn primary big" href="download.html">Download free</a><a class="btn big" href="games.html">Browse games</a></div>
+    <p class="muted" style="margin-top:14px;font-size:.95rem">Linux &amp; Windows · Open source · No anti-cheat games, ever</p>
+  </div>
+  <div class="stage" id="stage">
+    <img class="fan" alt=""><img class="fan" alt=""><img class="fan" alt="">
+    <div class="toast" id="toast"><div class="ring"><img alt=""></div><div><small>Achievement unlocked</small><b></b></div></div>
+  </div>
+</div></div>
+
+<section><div class="wrap">
+  <div class="stats reveal">
+    <div class="card stat"><div class="n" data-count="games">0</div><div class="muted">games supported</div></div>
+    <div class="card stat"><div class="n" data-count="achievements">0</div><div class="muted">achievements</div></div>
+    <div class="card stat"><div class="n" data-count="points">0</div><div class="muted">Gamerscore to earn</div></div>
+    <div class="card stat"><div class="n" data-count="players">0</div><div class="muted">players</div></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="reveal">Why this exists</h2>
+  <p class="reveal" style="max-width:760px">Plenty of great PC games came out before achievements existed, or lost them when services like Games for Windows Live shut down. Their console versions often had full lists. Achievement Hub brings those back to the PC, tracks them while you play, and lets you show them off to your friends.</p>
+  <div class="steps" style="margin-top:28px">
+    <div class="card lift reveal"><h3>Install the app</h3><p class="muted">It finds your games wherever they live: Steam, GOG, Heroic, Bottles, a folder on a USB drive.</p></div>
+    <div class="card lift reveal"><h3>Add a game</h3><p class="muted">One click puts the overlay in the game. No launch options, no mod manager. Launch it however you usually do.</p></div>
+    <div class="card lift reveal"><h3>Play and pop</h3><p class="muted">Achievements pop in-game. Press Shift+F2 or the Xbox button for your list, your friends and your games.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="row reveal" style="justify-content:space-between"><h2 style="margin:0">Featured games</h2><a href="games.html">All games →</a></div>
+  <div class="strip reveal" style="margin-top:24px"><div class="track" id="strip"></div></div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="reveal">Top players</h2>
+  <div id="leaders" class="grid reveal"><p class="muted">No players yet. <a href="signup.html">Be the first.</a></p></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="card reveal" style="text-align:center;padding:44px 20px;background:linear-gradient(135deg,rgba(76,201,49,.18),rgba(139,108,255,.12))">
+    <h2>Your backlog is waiting.</h2>
+    <p class="muted">Make an account, link the app, and every achievement you earn shows up on your profile.</p>
+    <div class="row" style="justify-content:center"><a class="btn primary big" href="signup.html">Create an account</a><a class="btn big" href="download.html">Get the app</a></div>
+  </div>
+</div></section>
+</main>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const count = (el, to) => {
+    const t0 = performance.now(), dur = 1400;
+    const step = (t) => { const k = Math.min(1, (t - t0) / dur); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))).toLocaleString(); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  };
+  let list = [];
+  try { list = await games(); } catch {}
+  const withArt = list.filter((g) => g.cover);
+  // The fanned covers on the right.
+  const fans = document.querySelectorAll('.stage .fan');
+  [...withArt].sort(() => Math.random() - 0.5).slice(0, 3).forEach((g, i) => (fans[i].src = g.cover));
+  // Featured strip (doubled so it loops seamlessly).
+  const cards = list.map((g) => coverCard(g)).join('');
+  $('#strip').innerHTML = cards + cards;
+  // Counters, once they're on screen.
+  let players = 0;
+  try { players = (await api('/leaderboard')).players; } catch {}
+  const totals = { games: list.length, achievements: list.reduce((a, g) => a + g.total, 0), points: list.reduce((a, g) => a + g.points, 0), players: players.length || 0 };
+  new IntersectionObserver((es, o) => es.forEach((e) => { if (e.isIntersecting) { document.querySelectorAll('[data-count]').forEach((el) => count(el, totals[el.dataset.count])); o.disconnect(); } }))
+    .observe($('.stats'));
+  if (players.length) $('#leaders').innerHTML = players.slice(0, 8).map((p, i) => `
+    <a class="card person" href="profile.html?u=${encodeURIComponent(p.gamertag)}"><b style="width:24px;color:var(--muted)">${i + 1}</b>${pic(p, true)}
+      <div class="grow"><b>${esc(p.gamertag)}</b><br><span class="gs">${p.gamerscore}</span></div></a>`).join('');
+  // Achievement pop-ups, cycling through real ones.
+  const pool = [];
+  for (const g of withArt.slice(0, 6)) {
+    try { const d = await game(g.id); d.achievements.filter((a) => a.icon && !a.secret).forEach((a) => pool.push({ ...a, game: d.title })); } catch {}
+  }
+  const toast = $('#toast');
+  const pop = () => {
+    if (!pool.length) return;
+    const a = pool[Math.floor(Math.random() * pool.length)];
+    toast.querySelector('img').src = a.icon;
+    toast.querySelector('b').textContent = `${a.points}G · ${a.name}`;
+    toast.classList.remove('show'); void toast.offsetWidth; toast.classList.add('show');
+  };
+  pop(); setInterval(pop, 4600);
+});
+</script>
+</body>
+</html>

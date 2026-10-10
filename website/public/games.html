@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Games · Achievement Hub</title>
+<meta name="description" content="Every PC game Achievement Hub supports, with its full achievement list.">
+<meta name="theme-color" content="#070b10">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Games · Achievement Hub">
+<meta property="og:description" content="Every PC game Achievement Hub supports, with its full achievement list.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap">
+  <h1 class="reveal">Games</h1>
+  <p class="muted reveal" style="max-width:700px">Every game with an achievement list. Click a cover to see its achievements, which ones are confirmed to unlock, and which still need a player to test them.</p>
+  <div class="row reveal" style="margin:20px 0 26px">
+    <input id="q" placeholder="Search games…" style="max-width:320px">
+    <select id="sort" style="max-width:220px">
+      <option value="title">A to Z</option><option value="total">Most achievements</option><option value="mapped">Most mapped</option><option value="year">Newest</option>
+    </select>
+  </div>
+  <div class="covers" id="list"><div class="skel" style="aspect-ratio:2/3"></div><div class="skel" style="aspect-ratio:2/3"></div><div class="skel" style="aspect-ratio:2/3"></div><div class="skel" style="aspect-ratio:2/3"></div><div class="skel" style="aspect-ratio:2/3"></div><div class="skel" style="aspect-ratio:2/3"></div><div class="skel" style="aspect-ratio:2/3"></div><div class="skel" style="aspect-ratio:2/3"></div></div>
+  <div class="card reveal" style="margin-top:40px">
+    <h3>Don't see your game?</h3>
+    <p class="muted" style="margin:0">Request it from the app (Request a Game) or the overlay's Requests blade. Games with anti-cheat are never supported, so nobody risks a ban.</p>
+  </div>
+</div></section></main>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  let all = [];
+  const draw = () => {
+    const q = $('#q').value.toLowerCase(), by = $('#sort').value;
+    const shown = all.filter((g) => g.title.toLowerCase().includes(q)).sort((a, b) =>
+      by === 'total' ? b.total - a.total : by === 'mapped' ? b.tracked / b.total - a.tracked / a.total : by === 'year' ? (b.year || 0) - (a.year || 0) : a.title.localeCompare(b.title));
+    $('#list').innerHTML = shown.length ? shown.map((g, i) => coverCard(g).replace('class="cover"', `class="cover" style="animation:slide-in .5s ${i * 0.04}s backwards"`)).join('') : '<p class="muted">No matches.</p>';
+  };
+  try { all = await games(); draw(); } catch { $('#list').innerHTML = '<p class="muted">Couldn\'t load the games right now.</p>'; }
+  $('#q').addEventListener('input', draw);
+  $('#sort').addEventListener('change', draw);
+});
+</script>
+</body>
+</html>

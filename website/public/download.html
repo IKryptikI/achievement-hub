@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Download · Achievement Hub</title>
+<meta name="description" content="Download Achievement Hub for Linux or Windows, and how to install it.">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Download · Achievement Hub">
+<meta property="og:description" content="Download Achievement Hub for Linux or Windows, and how to install it.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main>
+<section><div class="wrap reveal">
+  <h1>Download</h1>
+  <p class="muted">The desktop app finds your games and installs the overlay into them. Both are in one download.</p>
+  <div class="grid">
+    <div class="card"><h3>Linux</h3><p class="muted">AppImage, works on most distributions. Games running through Proton, Wine, Heroic, Bottles or Lutris are supported.</p><a class="btn primary" id="dl-linux" href="#">Download for Linux</a></div>
+    <div class="card"><h3>Windows</h3><p class="muted">Windows 10 or 11, 64-bit.</p><a class="btn primary" id="dl-windows" href="#">Download for Windows</a></div>
+  </div>
+  <p class="muted" style="margin-top:14px">All releases and checksums are on <a id="dl-all" href="#" target="_blank" rel="noopener">GitHub</a>. Or build it yourself from the <a id="src" href="#" target="_blank" rel="noopener">source code</a>.</p>
+</div></section>
+
+<section><div class="wrap reveal">
+  <h2>Installing</h2>
+  <div class="grid">
+    <div class="card"><h3>Linux</h3>
+      <ol class="install">
+        <li>Download the <code>.AppImage</code> file.</li>
+        <li>Make it runnable: right-click → Properties → Permissions → "Allow executing", or run <code>chmod +x AchievementHub*.AppImage</code>.</li>
+        <li>Open it. It scans Steam, Heroic, Bottles and your game folders.</li>
+      </ol></div>
+    <div class="card"><h3>Windows</h3>
+      <ol class="install">
+        <li>Download and run the installer.</li>
+        <li>If SmartScreen warns you (new apps without a paid certificate do), click "More info" → "Run anyway".</li>
+        <li>Open Achievement Hub from the Start menu.</li>
+      </ol></div>
+  </div>
+</div></section>
+
+<section><div class="wrap reveal">
+  <h2>Adding a game</h2>
+  <ol class="install">
+    <li>In the app, open <b>Add Game</b>. Supported games show their achievement count; games with anti-cheat are blocked.</li>
+    <li>Click <b>Install overlay</b>. The app adds a small file next to the game (and, on Linux, a setting so Wine loads it). Nothing else about the game changes, and <b>Uninstall</b> puts everything back.</li>
+    <li>Launch the game the way you always do. A welcome pop-up means it's working.</li>
+    <li>Open the overlay any time with <b>Shift+F2</b>, or the <b>Xbox button</b> (Back+Start also works).</li>
+  </ol>
+  <h2 style="margin-top:36px">Connecting your account</h2>
+  <ol class="install">
+    <li><a href="signup.html">Create an account</a> and open <a href="account.html">Account</a> → <b>Link the app</b> to get a code.</li>
+    <li>In the app, open <b>Friends</b> and enter the code. Your Gamerscore and unlocks now appear on your profile, and your friends appear in the overlay.</li>
+  </ol>
+</div></section>
+</main>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  for (const id of ['dl-linux', 'dl-windows', 'dl-all']) $('#' + id).href = SITE.releases;
+  $('#src').href = SITE.github;
+});
+</script>
+</body>
+</html>

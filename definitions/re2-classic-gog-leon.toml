@@ -1,0 +1,481 @@
+# Resident Evil 2 (1998) — GOG release, Leon scenario (LeonU.exe).
+# Memory map: games/re2-classic-gog.md · Full set plan: games/re2-achievement-set.md
+#
+# Achievements without `when` are listed in the overlay but can't unlock yet
+# (their memory conditions haven't been found). Points total 1000.
+
+[game]
+id = "re2-classic-gog"
+title = "Resident Evil 2"
+subtitle = "Leon"
+developer = "Capcom"
+publisher = "Capcom"
+year = 1998
+description = "Two survivors arrive in Raccoon City on the night it falls. Rookie cop Leon S. Kennedy reports for his first day at a police station overrun by the dead, and finds the outbreak was no accident."
+
+[[build]]
+exe = "LeonU.exe"
+timestamp = 0x370c3909
+image_size = 0x5ab000
+
+# ── Leon's Story ────────────────────────────────────────────────
+[[achievement]]
+id = "leon_start"
+name = "Rookie's First Day"
+description = "Start the Leon scenario."
+category = "Leon's Story"
+points = 5
+
+[[achievement]]
+id = "rpd"
+name = "Welcome to the R.P.D."
+description = "Make it inside the police station."
+category = "Leon's Story"
+points = 10
+
+[[achievement]]
+id = "marvin"
+name = "Hey, Marvin"
+description = "Talk to Marvin in the East Office."
+category = "Leon's Story"
+points = 5
+
+[[achievement]]
+id = "red_jewel"
+name = "Jewel Thief"
+description = "Find a Red Jewel."
+category = "Leon's Story"
+points = 10
+when = [
+  # Any of the 11 inventory slots (4 bytes each) holds item 0x33.
+  { read = "u8", address = 0x999334, stride = 4, count = 11, eq = 0x33 },
+]
+
+[[achievement]]
+id = "medals"
+name = "Decorated Officer"
+description = "Collect the Unicorn, Eagle and Wolf medals."
+category = "Leon's Story"
+points = 15
+
+[[achievement]]
+id = "card_keys"
+name = "Full House"
+description = "Collect the Spade, Diamond, Heart and Club keys."
+category = "Leon's Story"
+points = 20
+
+[[achievement]]
+id = "ben"
+name = "Cell Mates"
+description = "Talk to Ben in the holding cells."
+category = "Leon's Story"
+points = 10
+
+[[achievement]]
+id = "ada"
+name = "Lady in Red"
+description = "Meet Ada Wong."
+category = "Leon's Story"
+points = 10
+secret = true
+
+[[achievement]]
+id = "alligator"
+name = "See Ya Later"
+description = "Defeat the giant alligator in the sewers."
+category = "Leon's Story"
+points = 20
+secret = true
+
+[[achievement]]
+id = "lab"
+name = "Going Down"
+description = "Take the freight elevator into the Umbrella lab."
+category = "Leon's Story"
+points = 10
+secret = true
+
+[[achievement]]
+id = "leon_a"
+name = "Last Train Out"
+description = "Complete Leon's first scenario."
+category = "Leon's Story"
+points = 25
+
+[[achievement]]
+id = "leon_b"
+name = "Second Shift"
+description = "Complete Leon's second scenario."
+category = "Leon's Story"
+points = 25
+
+
+# ── Claire's Story ──────────────────────────────────────────────
+[[achievement]]
+id = "claire_start"
+name = "Looking for Chris"
+description = "Start the Claire scenario."
+category = "Claire's Story"
+points = 5
+
+[[achievement]]
+id = "sherry"
+name = "Big Sister"
+description = "Meet Sherry Birkin."
+category = "Claire's Story"
+points = 10
+
+[[achievement]]
+id = "irons_office"
+name = "The Chief's Hobby"
+description = "Find the trophy room in Chief Irons' office."
+category = "Claire's Story"
+points = 5
+
+[[achievement]]
+id = "irons"
+name = "Chief's Last Stand"
+description = "Get past Chief Irons."
+category = "Claire's Story"
+points = 15
+secret = true
+
+[[achievement]]
+id = "annette"
+name = "Mother Knows Best"
+description = "Meet Annette Birkin."
+category = "Claire's Story"
+points = 10
+secret = true
+
+[[achievement]]
+id = "vaccine"
+name = "The Cure"
+description = "Make the vaccine for Sherry."
+category = "Claire's Story"
+points = 15
+secret = true
+
+[[achievement]]
+id = "claire_a"
+name = "Runs in the Family"
+description = "Complete Claire's first scenario."
+category = "Claire's Story"
+points = 25
+
+[[achievement]]
+id = "claire_b"
+name = "Still Looking"
+description = "Complete Claire's second scenario."
+category = "Claire's Story"
+points = 25
+
+
+# ── Bosses & Creatures ──────────────────────────────────────────
+[[achievement]]
+id = "g1"
+name = "Birkin's Mistake"
+description = "Defeat G's first form."
+category = "Bosses & Creatures"
+points = 15
+secret = true
+
+[[achievement]]
+id = "g2"
+name = "It Keeps Changing"
+description = "Defeat G's second form."
+category = "Bosses & Creatures"
+points = 20
+secret = true
+
+[[achievement]]
+id = "mr_x"
+name = "Big Guy in a Trench Coat"
+description = "Defeat Mr. X in the lab."
+category = "Bosses & Creatures"
+points = 25
+secret = true
+
+[[achievement]]
+id = "g_final"
+name = "Off the Rails"
+description = "Defeat G's final form on the train."
+category = "Bosses & Creatures"
+points = 25
+secret = true
+
+[[achievement]]
+id = "licker"
+name = "Tongue Lashing"
+description = "Defeat a Licker."
+category = "Bosses & Creatures"
+points = 10
+
+[[achievement]]
+id = "ivy"
+name = "Weed Killer"
+description = "Defeat an Ivy."
+category = "Bosses & Creatures"
+points = 10
+
+[[achievement]]
+id = "dog"
+name = "Bad Dog"
+description = "Put down a zombie dog."
+category = "Bosses & Creatures"
+points = 5
+
+[[achievement]]
+id = "spider"
+name = "Arachnophobia"
+description = "Defeat a giant spider."
+category = "Bosses & Creatures"
+points = 10
+
+[[achievement]]
+id = "moth"
+name = "Moth to a Flame"
+description = "Defeat a giant moth."
+category = "Bosses & Creatures"
+points = 10
+
+[[achievement]]
+id = "crow"
+name = "Murder of Crows"
+description = "Shoot down a crow."
+category = "Bosses & Creatures"
+points = 5
+
+
+# ── Familiar Faces ──────────────────────────────────────────────
+[[achievement]]
+id = "brad"
+name = "Sorry, Brad"
+description = "Put down Brad Vickers."
+category = "Familiar Faces"
+points = 15
+secret = true
+
+[[achievement]]
+id = "forest"
+name = "Bravo Team Reunion"
+description = "Put down Forest Speyer."
+category = "Familiar Faces"
+points = 10
+secret = true
+
+[[achievement]]
+id = "kendo"
+name = "Kendo's Last Customer"
+description = "Get out of Kendo's gun shop alive."
+category = "Familiar Faces"
+points = 5
+
+
+# ── Weapons & Gear ──────────────────────────────────────────────
+[[achievement]]
+id = "shotgun"
+name = "Boomstick"
+description = "Get the shotgun."
+category = "Weapons & Gear"
+points = 10
+
+[[achievement]]
+id = "magnum"
+name = "Hand Cannon"
+description = "Get the magnum."
+category = "Weapons & Gear"
+points = 15
+
+[[achievement]]
+id = "smg"
+name = "Spray and Pray"
+description = "Get the submachine gun."
+category = "Weapons & Gear"
+points = 10
+
+[[achievement]]
+id = "flamethrower"
+name = "Got a Light?"
+description = "Get the flamethrower."
+category = "Weapons & Gear"
+points = 10
+
+[[achievement]]
+id = "sparkshot"
+name = "Shocking"
+description = "Get the Spark Shot."
+category = "Weapons & Gear"
+points = 10
+
+[[achievement]]
+id = "bowgun"
+name = "Bolt Action"
+description = "Get the bowgun."
+category = "Weapons & Gear"
+points = 10
+
+[[achievement]]
+id = "colt"
+name = "Six Shooter"
+description = "Get the Colt S.A.A."
+category = "Weapons & Gear"
+points = 15
+
+[[achievement]]
+id = "grenade_rounds"
+name = "Mixed Bag"
+description = "Load the grenade launcher with explosive, acid and flame rounds."
+category = "Weapons & Gear"
+points = 15
+
+[[achievement]]
+id = "upgrades"
+name = "Gun Nut"
+description = "Find every weapon upgrade part."
+category = "Weapons & Gear"
+points = 20
+
+[[achievement]]
+id = "rocket"
+name = "Problem Solver"
+description = "Get the rocket launcher."
+category = "Weapons & Gear"
+points = 25
+
+[[achievement]]
+id = "side_pack"
+name = "Pack Mule"
+description = "Find a Side Pack."
+category = "Weapons & Gear"
+points = 5
+
+
+# ── Odds & Ends ─────────────────────────────────────────────────
+[[achievement]]
+id = "film"
+name = "Say Cheese"
+description = "Develop a roll of film."
+category = "Odds & Ends"
+points = 5
+
+[[achievement]]
+id = "all_film"
+name = "Shutterbug"
+description = "Develop every roll of film."
+category = "Odds & Ends"
+points = 20
+
+[[achievement]]
+id = "costume"
+name = "Fashion Statement"
+description = "Change into an alternate costume."
+category = "Odds & Ends"
+points = 15
+
+
+# ── Challenges ──────────────────────────────────────────────────
+[[achievement]]
+id = "rank_a"
+name = "Class A"
+description = "Finish any scenario with an A rank."
+category = "Challenges"
+points = 25
+
+[[achievement]]
+id = "straight_a"
+name = "Straight A's"
+description = "Finish all four scenarios with an A rank."
+category = "Challenges"
+points = 45
+
+[[achievement]]
+id = "no_saves"
+name = "Who Needs Typewriters?"
+description = "Finish a scenario without saving."
+category = "Challenges"
+points = 25
+
+[[achievement]]
+id = "no_healing"
+name = "Walk It Off"
+description = "Finish a scenario without using a healing item."
+category = "Challenges"
+points = 25
+
+[[achievement]]
+id = "under_2h30"
+name = "In a Hurry"
+description = "Finish a scenario in under 2 hours 30 minutes."
+category = "Challenges"
+points = 25
+
+[[achievement]]
+id = "under_2h"
+name = "Clock Watcher"
+description = "Finish a scenario in under 2 hours."
+category = "Challenges"
+points = 30
+
+[[achievement]]
+id = "full_recovery"
+name = "Close Call"
+description = "Heal to full health from Caution or worse."
+category = "Challenges"
+points = 10
+when = [
+  # Health was 1–119 (Caution or Danger) at the last check...
+  { read = "i16", address = 0x994646, previous = true, between = [1, 119] },
+  # ...and is full now.
+  { read = "i16", address = 0x994646, eq = 200 },
+]
+
+[[achievement]]
+id = "no_side_pack"
+name = "Travelling Light"
+description = "Finish a scenario without picking up a Side Pack."
+category = "Challenges"
+points = 20
+
+[[achievement]]
+id = "original"
+name = "By the Book"
+description = "Finish a scenario in Original mode."
+category = "Challenges"
+points = 20
+
+
+[[achievement]]
+id = "handgun_only"
+name = "Peashooter"
+description = "Finish a scenario without picking up any weapon besides the handgun and knife."
+category = "Challenges"
+points = 35
+
+# ── Bonus Modes ─────────────────────────────────────────────────
+[[achievement]]
+id = "hunk"
+name = "Mr. Death"
+description = "Complete The 4th Survivor."
+category = "Bonus Modes"
+points = 30
+secret = true
+
+[[achievement]]
+id = "tofu"
+name = "Soy Strong"
+description = "Complete The To-fu Survivor."
+category = "Bonus Modes"
+points = 35
+secret = true
+
+# ── Platinum ─────────────────────────────────────────────────────
+
+[[achievement]]
+id = "platinum"
+name = "Last One Out of Raccoon City"
+description = "Unlock every other achievement."
+category = "Platinum"
+points = 50
+platinum = true

@@ -1,0 +1,705 @@
+# The Elder Scrolls IV: Oblivion (2006), Steam GOTY Edition, patch 1.2.0416.
+# Achievements imported from the original Xbox 360 release (1000G base +
+# 250G Shivering Isles). Source: UESP (Oblivion:Achievements,
+# Shivering:Xbox 360 Achievements). Memory map: games/oblivion.md
+#
+# Factions: Fighters 0x2228F, Mages 0x22296, Thieves 0x24164, Dark
+# Brotherhood 0x2F872 (rank 4 Executioner has no achievement), Arena
+# 0x299B9, Court of Madness 0x6A7FC (5 Dementia / 6 Mania are exclusive).
+# Dementia and Mania are mutually exclusive on one character, as on Xbox.
+
+[game]
+id = "oblivion"
+title = "The Elder Scrolls IV: Oblivion"
+developer = "Bethesda Game Studios"
+publisher = "Bethesda Softworks"
+year = 2006
+# Official icons: Oblivion Remastered's public Steam achievement list
+# (fetched per player into their profile, never shipped).
+icons_from = "steam:2623190"
+
+# Engine data (xOBSE's GameAPI.cpp / GameObjects.cpp, 1.2.0416). Quest
+# stages and faction ranks/IDs come from Oblivion.esm.
+[engine]
+kind = "gamebryo-oblivion"
+player = 0x00B333C4
+data_handler = 0x00B33A98
+
+[[build]]
+exe = "Oblivion.exe"   # Steam GOTY, 1.2.0416
+timestamp = 0x462392c7
+image_size = 0x805000
+
+
+# ── Main Quest ──────────────────────────────────────────────────
+[[achievement]]
+id = "mq_sewers"
+name = "Escaped the Imperial Sewers"
+steam_name = "Escaped the Imperial Sewers"
+description = "Escape the Imperial Sewers and reach the outside world."
+category = "Main Quest"
+points = 50
+[[achievement.when]]
+quest = "Charactergen"
+ge = 88
+
+[[achievement]]
+id = "mq_kvatch"
+name = "Closed an Oblivion Gate"
+steam_name = "Closed an Oblivion Gate"
+description = "Close the Oblivion Gate at Kvatch."
+category = "Main Quest"
+points = 50
+[[achievement.when]]
+quest = "MS48"
+ge = 50
+
+[[achievement]]
+id = "mq_dagon"
+name = "Located the Shrine of Dagon"
+steam_name = "Located the Shrine of Dagon"
+description = "Find the hidden Shrine of Dagon."
+category = "Main Quest"
+points = 50
+[[achievement.when]]
+quest = "MQ05"
+ge = 100
+
+[[achievement]]
+id = "mq_artifact"
+name = "Delivered Daedric Artifact"
+steam_name = "Delivered Daedric Artifact"
+description = "Deliver a Daedric artifact to Martin."
+category = "Main Quest"
+points = 50
+[[achievement.when]]
+quest = "MQ08"
+ge = 30
+
+[[achievement]]
+id = "mq_great_gate"
+name = "Destroyed the Great Gate"
+steam_name = "Destroyed the Great Gate"
+description = "Close the Great Gate at Bruma."
+category = "Main Quest"
+points = 50
+[[achievement.when]]
+quest = "MQ14"
+ge = 100
+
+[[achievement]]
+id = "mq_champion"
+name = "Champion of Cyrodiil"
+steam_name = "Champion of Cyrodiil"
+description = "Complete the Main Quest."
+category = "Main Quest"
+points = 110
+[[achievement.when]]
+quest = "MQ16"
+ge = 100
+
+
+# ── Fighters Guild ──────────────────────────────────────────────
+[[achievement]]
+id = "fg_associate"
+name = "Associate"
+steam_name = "Associate, Fighters Guild"
+description = "Joined the Fighters Guild."
+category = "Fighters Guild"
+points = 10
+[[achievement.when]]
+faction = 0x02228F
+ge = 0
+
+[[achievement]]
+id = "fg_apprentice"
+name = "Apprentice"
+steam_name = "Apprentice, Fighters Guild"
+description = "Reached Apprentice rank in the Fighters Guild."
+category = "Fighters Guild"
+points = 10
+[[achievement.when]]
+faction = 0x02228F
+ge = 1
+
+[[achievement]]
+id = "fg_journeyman"
+name = "Journeyman"
+steam_name = "Journeyman, Fighters Guild"
+description = "Reached Journeyman rank in the Fighters Guild."
+category = "Fighters Guild"
+points = 10
+[[achievement.when]]
+faction = 0x02228F
+ge = 2
+
+[[achievement]]
+id = "fg_swordsman"
+name = "Swordsman"
+steam_name = "Swordsman, Fighters Guild"
+description = "Reached Swordsman rank in the Fighters Guild."
+category = "Fighters Guild"
+points = 10
+[[achievement.when]]
+faction = 0x02228F
+ge = 3
+
+[[achievement]]
+id = "fg_protector"
+name = "Protector"
+steam_name = "Protector, Fighters Guild"
+description = "Reached Protector rank in the Fighters Guild."
+category = "Fighters Guild"
+points = 10
+[[achievement.when]]
+faction = 0x02228F
+ge = 4
+
+[[achievement]]
+id = "fg_defender"
+name = "Defender"
+steam_name = "Defender, Fighters Guild"
+description = "Reached Defender rank in the Fighters Guild."
+category = "Fighters Guild"
+points = 10
+[[achievement.when]]
+faction = 0x02228F
+ge = 5
+
+[[achievement]]
+id = "fg_warder"
+name = "Warder"
+steam_name = "Warder, Fighters Guild"
+description = "Reached Warder rank in the Fighters Guild."
+category = "Fighters Guild"
+points = 10
+[[achievement.when]]
+faction = 0x02228F
+ge = 6
+
+[[achievement]]
+id = "fg_guardian"
+name = "Guardian"
+steam_name = "Guardian, Fighters Guild"
+description = "Reached Guardian rank in the Fighters Guild."
+category = "Fighters Guild"
+points = 10
+[[achievement.when]]
+faction = 0x02228F
+ge = 7
+
+[[achievement]]
+id = "fg_champion"
+name = "Champion"
+steam_name = "Champion, Fighters Guild"
+description = "Reached Champion rank in the Fighters Guild."
+category = "Fighters Guild"
+points = 10
+[[achievement.when]]
+faction = 0x02228F
+ge = 8
+
+[[achievement]]
+id = "fg_master"
+name = "Master"
+steam_name = "Master, Fighters Guild"
+description = "Completed the Fighters Guild questline."
+category = "Fighters Guild"
+points = 50
+[[achievement.when]]
+faction = 0x02228F
+ge = 9
+
+
+# ── Mages Guild ─────────────────────────────────────────────────
+[[achievement]]
+id = "mg_associate"
+name = "Associate"
+steam_name = "Associate, Mages Guild"
+description = "Joined the Mages Guild."
+category = "Mages Guild"
+points = 10
+[[achievement.when]]
+faction = 0x022296
+ge = 0
+
+[[achievement]]
+id = "mg_apprentice"
+name = "Apprentice"
+steam_name = "Apprentice, Mages Guild"
+description = "Reached Apprentice rank in the Mages Guild."
+category = "Mages Guild"
+points = 10
+[[achievement.when]]
+faction = 0x022296
+ge = 1
+
+[[achievement]]
+id = "mg_journeyman"
+name = "Journeyman"
+steam_name = "Journeyman, Mages Guild"
+description = "Reached Journeyman rank in the Mages Guild."
+category = "Mages Guild"
+points = 10
+[[achievement.when]]
+faction = 0x022296
+ge = 2
+
+[[achievement]]
+id = "mg_evoker"
+name = "Evoker"
+steam_name = "Evoker, Mages Guild"
+description = "Reached Evoker rank in the Mages Guild."
+category = "Mages Guild"
+points = 10
+[[achievement.when]]
+faction = 0x022296
+ge = 3
+
+[[achievement]]
+id = "mg_conjurer"
+name = "Conjurer"
+steam_name = "Conjurer, Mages Guild"
+description = "Reached Conjurer rank in the Mages Guild."
+category = "Mages Guild"
+points = 10
+[[achievement.when]]
+faction = 0x022296
+ge = 4
+
+[[achievement]]
+id = "mg_magician"
+name = "Magician"
+steam_name = "Magician, Mages Guild"
+description = "Reached Magician rank in the Mages Guild."
+category = "Mages Guild"
+points = 10
+[[achievement.when]]
+faction = 0x022296
+ge = 5
+
+[[achievement]]
+id = "mg_warlock"
+name = "Warlock"
+steam_name = "Warlock, Mages Guild"
+description = "Reached Warlock rank in the Mages Guild."
+category = "Mages Guild"
+points = 10
+[[achievement.when]]
+faction = 0x022296
+ge = 6
+
+[[achievement]]
+id = "mg_wizard"
+name = "Wizard"
+steam_name = "Wizard, Mages Guild"
+description = "Reached Wizard rank in the Mages Guild."
+category = "Mages Guild"
+points = 10
+[[achievement.when]]
+faction = 0x022296
+ge = 7
+
+[[achievement]]
+id = "mg_master_wizard"
+name = "Master-Wizard"
+steam_name = "Master-Wizard, Mages Guild"
+description = "Reached Master-Wizard rank in the Mages Guild."
+category = "Mages Guild"
+points = 10
+[[achievement.when]]
+faction = 0x022296
+ge = 8
+
+[[achievement]]
+id = "mg_archmage"
+name = "Arch-Mage"
+steam_name = "Arch-Mage, Mages Guild"
+description = "Completed the Mages Guild questline."
+category = "Mages Guild"
+points = 50
+[[achievement.when]]
+faction = 0x022296
+ge = 9
+
+
+# ── Thieves Guild ───────────────────────────────────────────────
+[[achievement]]
+id = "tg_pickpocket"
+name = "Pickpocket"
+steam_name = "Pickpocket, Thieves Guild"
+description = "Joined the Thieves Guild."
+category = "Thieves Guild"
+points = 10
+[[achievement.when]]
+faction = 0x024164
+ge = 0
+
+[[achievement]]
+id = "tg_footpad"
+name = "Footpad"
+steam_name = "Footpad, Thieves Guild"
+description = "Reached Footpad rank in the Thieves Guild."
+category = "Thieves Guild"
+points = 10
+[[achievement.when]]
+faction = 0x024164
+ge = 1
+
+[[achievement]]
+id = "tg_bandit"
+name = "Bandit"
+steam_name = "Bandit, Thieves Guild"
+description = "Reached Bandit rank in the Thieves Guild."
+category = "Thieves Guild"
+points = 10
+[[achievement.when]]
+faction = 0x024164
+ge = 2
+
+[[achievement]]
+id = "tg_prowler"
+name = "Prowler"
+steam_name = "Prowler, Thieves Guild"
+description = "Reached Prowler rank in the Thieves Guild."
+category = "Thieves Guild"
+points = 10
+[[achievement.when]]
+faction = 0x024164
+ge = 3
+
+[[achievement]]
+id = "tg_cat_burglar"
+name = "Cat Burglar"
+steam_name = "Cat Burglar, Thieves Guild"
+description = "Reached Cat Burglar rank in the Thieves Guild."
+category = "Thieves Guild"
+points = 10
+[[achievement.when]]
+faction = 0x024164
+ge = 4
+
+[[achievement]]
+id = "tg_shadowfoot"
+name = "Shadowfoot"
+steam_name = "Shadowfoot, Thieves Guild"
+description = "Reached Shadowfoot rank in the Thieves Guild."
+category = "Thieves Guild"
+points = 10
+[[achievement.when]]
+faction = 0x024164
+ge = 5
+
+[[achievement]]
+id = "tg_master_thief"
+name = "Master Thief"
+steam_name = "Master Thief, Thieves Guild"
+description = "Reached Master Thief rank in the Thieves Guild."
+category = "Thieves Guild"
+points = 10
+[[achievement.when]]
+faction = 0x024164
+ge = 6
+
+[[achievement]]
+id = "tg_gray_fox"
+name = "Gray Fox"
+steam_name = "Guildmaster, Thieves Guild"
+description = "Completed the Thieves Guild questline."
+category = "Thieves Guild"
+points = 50
+[[achievement.when]]
+faction = 0x024164
+ge = 7
+
+
+# ── Dark Brotherhood ────────────────────────────────────────────
+[[achievement]]
+id = "db_murderer"
+name = "Murderer"
+steam_name = "Murderer, Dark Brotherhood"
+description = "Joined the Dark Brotherhood."
+category = "Dark Brotherhood"
+points = 10
+[[achievement.when]]
+faction = 0x02F872
+ge = 0
+
+[[achievement]]
+id = "db_slayer"
+name = "Slayer"
+steam_name = "Slayer, Dark Brotherhood"
+description = "Reached Slayer rank in the Dark Brotherhood."
+category = "Dark Brotherhood"
+points = 10
+[[achievement.when]]
+faction = 0x02F872
+ge = 1
+
+[[achievement]]
+id = "db_eliminator"
+name = "Eliminator"
+steam_name = "Eliminator, Dark Brotherhood"
+description = "Reached Eliminator rank in the Dark Brotherhood."
+category = "Dark Brotherhood"
+points = 10
+[[achievement.when]]
+faction = 0x02F872
+ge = 2
+
+[[achievement]]
+id = "db_assassin"
+name = "Assassin"
+steam_name = "Assassin, Dark Brotherhood"
+description = "Reached Assassin rank in the Dark Brotherhood."
+category = "Dark Brotherhood"
+points = 10
+[[achievement.when]]
+faction = 0x02F872
+ge = 3
+
+[[achievement]]
+id = "db_silencer"
+name = "Silencer"
+steam_name = "Silencer, Dark Brotherhood"
+description = "Reached Silencer rank in the Dark Brotherhood."
+category = "Dark Brotherhood"
+points = 10
+[[achievement.when]]
+faction = 0x02F872
+ge = 5
+
+[[achievement]]
+id = "db_speaker"
+name = "Speaker"
+steam_name = "Speaker, Dark Brotherhood"
+description = "Reached Speaker rank in the Dark Brotherhood."
+category = "Dark Brotherhood"
+points = 10
+[[achievement.when]]
+faction = 0x02F872
+ge = 6
+
+[[achievement]]
+id = "db_listener"
+name = "Listener"
+steam_name = "Listener, Dark Brotherhood"
+description = "Completed the Dark Brotherhood questline."
+category = "Dark Brotherhood"
+points = 50
+[[achievement.when]]
+faction = 0x02F872
+ge = 7
+
+
+# ── Arena ───────────────────────────────────────────────────────
+[[achievement]]
+id = "ar_pit_dog"
+name = "Pit Dog"
+steam_name = "Pit Dog, Arena"
+description = "Joined the Arena in the Imperial City."
+category = "Arena"
+points = 10
+[[achievement.when]]
+faction = 0x0299B9
+ge = 0
+
+[[achievement]]
+id = "ar_brawler"
+name = "Brawler"
+steam_name = "Brawler, Arena"
+description = "Reached Brawler rank in the Arena."
+category = "Arena"
+points = 10
+[[achievement.when]]
+faction = 0x0299B9
+ge = 1
+
+[[achievement]]
+id = "ar_bloodletter"
+name = "Bloodletter"
+steam_name = "Bloodletter, Arena"
+description = "Reached Bloodletter rank in the Arena."
+category = "Arena"
+points = 10
+[[achievement.when]]
+faction = 0x0299B9
+ge = 2
+
+[[achievement]]
+id = "ar_myrmidon"
+name = "Myrmidon"
+steam_name = "Myrmidon, Arena"
+description = "Reached Myrmidon rank in the Arena."
+category = "Arena"
+points = 10
+[[achievement.when]]
+faction = 0x0299B9
+ge = 3
+
+[[achievement]]
+id = "ar_warrior"
+name = "Warrior"
+steam_name = "Warrior, Arena"
+description = "Reached Warrior rank in the Arena."
+category = "Arena"
+points = 10
+[[achievement.when]]
+faction = 0x0299B9
+ge = 4
+
+[[achievement]]
+id = "ar_gladiator"
+name = "Gladiator"
+steam_name = "Gladiator, Arena"
+description = "Reached Gladiator rank in the Arena."
+category = "Arena"
+points = 10
+[[achievement.when]]
+faction = 0x0299B9
+ge = 5
+
+[[achievement]]
+id = "ar_hero"
+name = "Hero"
+steam_name = "Hero, Arena"
+description = "Reached Hero rank in the Arena."
+category = "Arena"
+points = 10
+[[achievement.when]]
+faction = 0x0299B9
+ge = 6
+
+[[achievement]]
+id = "ar_champion"
+name = "Champion"
+steam_name = "Champion, Arena"
+description = "Reached Champion rank in the Arena."
+category = "Arena"
+points = 10
+[[achievement.when]]
+faction = 0x0299B9
+ge = 7
+
+[[achievement]]
+id = "ar_grand_champion"
+name = "Grand Champion"
+steam_name = "Grand Champion, Arena"
+description = "Completed the Arena questline."
+category = "Arena"
+points = 50
+[[achievement.when]]
+faction = 0x0299B9
+ge = 8
+
+
+# ── Shivering Isles ─────────────────────────────────────────────
+[[achievement]]
+id = "si_tourist"
+name = "Tourist"
+steam_name = "Tourist, Shivering Isles"
+description = "Entered the Shivering Isles."
+category = "Shivering Isles"
+points = 20
+[[achievement.when]]
+quest = "SE01Door"
+ge = 200
+
+[[achievement]]
+id = "si_aspirant"
+name = "Aspirant"
+steam_name = "Aspirant, Shivering Isles"
+description = "Reached Aspirant rank in the Court of Madness."
+category = "Shivering Isles"
+points = 20
+[[achievement.when]]
+faction = 0x06A7FC
+ge = 1
+
+[[achievement]]
+id = "si_citizen"
+name = "Citizen"
+steam_name = "Citizen, Shivering Isles"
+description = "Reached Citizen rank in the Court of Madness."
+category = "Shivering Isles"
+points = 20
+[[achievement.when]]
+faction = 0x06A7FC
+ge = 2
+
+[[achievement]]
+id = "si_madman"
+name = "Madman"
+steam_name = "Madman, Shivering Isles"
+description = "Reached Madman rank in the Court of Madness."
+category = "Shivering Isles"
+points = 20
+[[achievement.when]]
+faction = 0x06A7FC
+ge = 3
+
+[[achievement]]
+id = "si_honored_madman"
+name = "Honored Madman"
+steam_name = "Honored Madman, Shivering Isles"
+description = "Reached Honored Madman rank in the Court of Madness."
+category = "Shivering Isles"
+points = 20
+[[achievement.when]]
+faction = 0x06A7FC
+ge = 4
+
+[[achievement]]
+id = "si_dementia"
+name = "Duke/Duchess of Dementia"
+steam_name = "Duke Dementia, Shivering Isles"
+description = "Reached Duke/Duchess of Dementia rank in the Court of Madness."
+category = "Shivering Isles"
+points = 30
+[[achievement.when]]
+faction = 0x06A7FC
+eq = 5
+
+[[achievement]]
+id = "si_mania"
+name = "Duke/Duchess of Mania"
+steam_name = "Duke Mania, Shivering Isles"
+description = "Reached Duke/Duchess of Mania rank in the Court of Madness."
+category = "Shivering Isles"
+points = 30
+[[achievement.when]]
+faction = 0x06A7FC
+eq = 6
+
+[[achievement]]
+id = "si_regent"
+name = "Regent"
+steam_name = "Regent, Shivering Isles"
+description = "Reached Regent rank in the Court of Madness."
+category = "Shivering Isles"
+points = 20
+[[achievement.when]]
+faction = 0x06A7FC
+ge = 7
+
+[[achievement]]
+id = "si_defender"
+name = "Defender"
+steam_name = "Defender, Shivering Isles"
+description = "Reached Defender of the Realm rank in the Court of Madness."
+category = "Shivering Isles"
+points = 20
+[[achievement.when]]
+faction = 0x06A7FC
+ge = 8
+
+[[achievement]]
+id = "si_madgod"
+name = "Madgod"
+steam_name = "Madgod, Shivering Isles"
+description = "Stopped the Greymarch."
+category = "Shivering Isles"
+points = 50
+[[achievement.when]]
+faction = 0x06A7FC
+ge = 9

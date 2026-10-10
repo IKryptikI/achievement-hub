@@ -1,0 +1,8 @@
+[workspace]
+resolver = "3"
+members = ["tracker", "overlay", "launcher", "hub", "preview", "themetool", "proxy-winmm", "proxy-version", "proxy-binkw32", "proxy-dinput8"]
+# vendor/hudhook is used by path from overlay, not built as a member.
+exclude = ["vendor"]
+
+[profile.release]
+debug = false

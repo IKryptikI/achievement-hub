@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reset your password · Achievement Hub</title>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Reset your password · Achievement Hub">
+<meta property="og:description" content="Achievements for the PC games that never had them. Free and open source.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap card reveal" style="max-width:520px">
+  <h1>Forgot your password?</h1>
+  <p class="muted">Use the recovery code you saved when you signed up.</p>
+  <form id="f">
+    <label for="gt">Gamertag</label><input id="gt" required autocomplete="username">
+    <label for="rc">Recovery code</label><input id="rc" required placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off">
+    <label for="pw">New password</label><input id="pw" type="password" required minlength="8" autocomplete="new-password">
+    <div id="msg"></div>
+    <p style="margin-top:18px"><button class="btn primary">Set new password</button></p>
+  </form>
+  <div class="card" style="margin-top:20px">
+    <h3>No recovery code?</h3>
+    <p class="muted" style="margin:0">If the Achievement Hub app on your computer is linked to your account, open its <b>Friends</b> page and choose <b>Forgot your website password?</b>. The linked app proves it's you.</p>
+  </div>
+</div></section></main>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  passwordField($('#pw')); strengthMeter($('#pw'));
+  $('#f').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const r = await api('/recover', { method: 'POST', body: { gamertag: $('#gt').value, recovery_code: $('#rc').value, new_password: $('#pw').value } });
+      $('#f').innerHTML = `<div class="note good">Password changed, and you're logged in.</div>
+        <p>Your old recovery code no longer works. Here's your new one; save it:</p><div class="code-big">${esc(r.recovery_code)}</div>
+        <a class="btn primary" href="account.html">Go to your account</a>`;
+    } catch (err) { note($('#msg'), err.message); }
+  });
+});
+</script>
+</body></html>

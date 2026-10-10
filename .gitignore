@@ -1,0 +1,7 @@
+/target/
+.scan/
+scripts/__pycache__/
+.db-repo/
+site-data/.icons-cache.json
+site-data/
+.build/

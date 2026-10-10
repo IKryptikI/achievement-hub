@@ -1,0 +1,350 @@
+# Saw: achievements imported from Exophase (saw-xbox-360), 46 total, 1000 points.
+# Achievements without `when` are listed but can't unlock yet (their
+# memory conditions haven't been found). `steam_api` ones unlock when the
+# game reports them to Steam.
+
+[game]
+id = "saw"
+title = "Saw"
+developer = "Zombie Studios"
+publisher = "Konami"
+year = 2009
+icons_from = "exophase:saw-xbox-360"
+
+[[build]]
+exe = "SawGame.exe"
+timestamp = 0x4ad39977
+image_size = 0x19b7a56
+
+[[achievement]]
+id = "it_s_a_trap"
+name = "It's A Trap!"
+steam_api = "SA_PUZZLES_ITS_A_TRAP"
+description = "Complete Reverse Bear Trap."
+points = 40
+secret = true
+
+[[achievement]]
+id = "what_was_that"
+name = "What Was That?!?"
+steam_api = "SA_WORLD_PIGHEAD"
+description = "First encounter with Pighead."
+points = 5
+secret = true
+
+[[achievement]]
+id = "damaged_goods"
+name = "Damaged Goods"
+steam_api = "SA_PUZZLES_AMANDA_NPC_TRAP"
+description = "Release Amanda from her Trap."
+points = 40
+secret = true
+
+[[achievement]]
+id = "hit_and_run"
+name = "Hit And Run"
+steam_api = "SA_PUZZLES_JENNINGS_NPC_TRAP"
+description = "Release Jennings from his Trap."
+points = 40
+secret = true
+
+[[achievement]]
+id = "absent_parent"
+name = "Absent Parent"
+steam_api = "SA_PUZZLES_MELISSA_NPC_TRAP"
+description = "Release Melissa from her Trap."
+points = 40
+secret = true
+
+[[achievement]]
+id = "aphasia"
+name = "Aphasia"
+steam_api = "SA_PUZZLES_OSWALD_NPC_TRAP"
+description = "Release Oswald from his Trap."
+points = 40
+secret = true
+
+[[achievement]]
+id = "eager_student"
+name = "Eager Student"
+steam_api = "SA_PUZZLES_OBI_NPC_TRAP"
+description = "Release Obi from his Trap."
+points = 40
+secret = true
+
+[[achievement]]
+id = "born_victim"
+name = "Born Victim"
+steam_api = "SA_PUZZLES_JEFF_NPC_TRAP"
+description = "Release Jeff from his Trap."
+points = 40
+secret = true
+
+[[achievement]]
+id = "violence_begets_violence"
+name = "Violence Begets Violence"
+steam_api = "SA_COMBAT_PIGHEAD"
+description = "Kill the Pighead."
+points = 40
+secret = true
+
+[[achievement]]
+id = "never_truly_free"
+name = "Never Truly Free"
+steam_api = "SA_WORLD_FREEDOM"
+description = "Complete game using Freedom Door."
+points = 100
+secret = true
+
+[[achievement]]
+id = "cost_of_the_truth"
+name = "Cost of the Truth"
+steam_api = "SA_WORLD_TRUTH"
+description = "Complete game using Truth Door."
+points = 100
+secret = true
+
+[[achievement]]
+id = "treasure"
+name = "Treasure!"
+steam_api = "SA_PUZZLES_CONTAINER"
+description = "Unlock first container."
+points = 10
+
+[[achievement]]
+id = "it_was_an_accident"
+name = "It Was An Accident"
+steam_api = "SA_COMBAT_ACCIDENT"
+description = "Kill first minion."
+points = 10
+
+[[achievement]]
+id = "self_defense"
+name = "Self-Defense"
+steam_api = "SA_COMBAT_SELF_DEFENSE"
+description = "Kill 10 minions."
+points = 15
+
+[[achievement]]
+id = "duress"
+name = "Duress"
+steam_api = "SA_COMBAT_DURESS"
+description = "Kill 20 minions."
+points = 20
+
+[[achievement]]
+id = "just_experimenting"
+name = "Just Experimenting"
+steam_api = "SA_COMBAT_HEAL"
+description = "Used Health Syringe for the first time"
+points = 10
+
+[[achievement]]
+id = "i_can_stop_anytime"
+name = "I Can Stop Anytime"
+steam_api = "SA_COMBAT_HEAL20"
+description = "Used 20 Health Syringes."
+points = 20
+
+[[achievement]]
+id = "you_ve_wasted_your_life"
+name = "You've Wasted Your Life"
+steam_api = "SA_WORLD_IDLE"
+description = "Idle for five minutes."
+points = 5
+
+[[achievement]]
+id = "would_you_like_to_know_more"
+name = "Would You Like To Know More?"
+steam_api = "SA_WORLD_ASYLUM"
+description = "Find your first Asylum File."
+points = 20
+
+[[achievement]]
+id = "who_is_the_jigsaw_killer"
+name = "Who Is The Jigsaw Killer?"
+steam_api = "SA_WORLD_PATIENT"
+description = "Find your first Patient File."
+points = 15
+
+[[achievement]]
+id = "darwin_would_be_proud"
+name = "Darwin Would Be Proud"
+steam_api = "SA_COMBAT_DEATH"
+description = "Died once."
+points = 20
+
+[[achievement]]
+id = "kill_or_be_killed"
+name = "Kill Or Be Killed"
+steam_api = "SA_COMBAT_COLLAR"
+description = "Killed a Collared Minion with a collar detonation."
+points = 30
+
+[[achievement]]
+id = "give_me_five"
+name = "Give Me Five!"
+steam_api = "SA_COMBAT_GIVE_ME_FIVE"
+description = "First kill with a Mannequin Arm."
+points = 10
+
+[[achievement]]
+id = "homerun"
+name = "Homerun"
+steam_api = "SA_COMBAT_HOMERUN"
+description = "First kill with a Bat."
+points = 10
+
+[[achievement]]
+id = "sometimes_it_sticks"
+name = "Sometimes It Sticks"
+steam_api = "SA_COMBAT_SOMETIMES_IT_STICKS"
+description = "First kill with a Nail Bat."
+points = 10
+
+[[achievement]]
+id = "cleaning_up"
+name = "Cleaning Up"
+steam_api = "SA_COMBAT_CLEANING_UP"
+description = "First kill with a Mop Handle."
+points = 10
+
+[[achievement]]
+id = "pipe_dream"
+name = "Pipe Dream"
+steam_api = "SA_COMBAT_PIPE_DREAM"
+description = "First kill with a Pipe."
+points = 10
+
+[[achievement]]
+id = "surgeon"
+name = "Surgeon"
+steam_api = "SA_COMBAT_SURGEON"
+description = "First kill with a Scalpel."
+points = 10
+
+[[achievement]]
+id = "penetrated"
+name = "Penetrated"
+steam_api = "SA_COMBAT_PENETRATION"
+description = "First kill with a Syringe."
+points = 10
+
+[[achievement]]
+id = "you_ve_been_served"
+name = "You've Been Served"
+steam_api = "SA_COMBAT_SERVED"
+description = "First kill with a Table Leg."
+points = 10
+
+[[achievement]]
+id = "you_ll_need_this_afterwards"
+name = "You'll Need This Afterwards"
+steam_api = "SA_COMBAT_AFTERWARDS"
+description = "First kill with a Crutch."
+points = 10
+
+[[achievement]]
+id = "grave_digger"
+name = "Grave Digger"
+steam_api = "SA_COMBAT_GRAVE_DIGGER"
+description = "First kill with a Shovel."
+points = 10
+
+[[achievement]]
+id = "lights_off"
+name = "Lights Off"
+steam_api = "SA_COMBAT_LIGHTS_OFF"
+description = "First kill with a Table Lamp."
+points = 10
+
+[[achievement]]
+id = "hatchet_job"
+name = "Hatchet Job"
+steam_api = "SA_COMBAT_HATCHET_JOB"
+description = "First kill with a Hatchet."
+points = 10
+
+[[achievement]]
+id = "fire_hazard"
+name = "Fire Hazard"
+steam_api = "SA_COMBAT_STOP_DROP_AND_ROLL"
+description = "First kill with fire"
+points = 10
+
+[[achievement]]
+id = "splitting_headache"
+name = "Splitting Headache"
+steam_api = "SA_COMBAT_HEADACHE"
+description = "First kill with Scissors."
+points = 10
+
+[[achievement]]
+id = "say_hello_to_my_little_friend"
+name = "Say Hello To My Little Friend"
+steam_api = "SA_COMBAT_LITTLE_FRIEND"
+description = "First kill with a Gun."
+points = 10
+
+[[achievement]]
+id = "wait_for_the_boom"
+name = "Wait For The Boom"
+steam_api = "SA_COMBAT_BOOM"
+description = "First kill with an Explosive Mine."
+points = 10
+
+[[achievement]]
+id = "whoops"
+name = "Whoops!"
+steam_api = "SA_COMBAT_WHOOPS"
+description = "First kill with a Stun Mine."
+points = 10
+
+[[achievement]]
+id = "choked_up"
+name = "Choked Up"
+steam_api = "SA_COMBAT_CHOKED_UP"
+description = "First kill with a Gas Mine."
+points = 10
+
+[[achievement]]
+id = "i_m_in_charge"
+name = "I'm In Charge"
+steam_api = "SA_COMBAT_IN_CHARGE"
+description = "Fought first NPC."
+points = 10
+
+[[achievement]]
+id = "curb_stomp"
+name = "Curb Stomp"
+steam_api = "SA_COMBAT_CURB_SMILE"
+description = "Stomped first Minion to death."
+points = 10
+
+[[achievement]]
+id = "merciless"
+name = "Merciless"
+steam_api = "SA_COMBAT_MERCILESS"
+description = "Stomped five Minions to death."
+points = 20
+
+[[achievement]]
+id = "forced_entry"
+name = "Forced Entry"
+steam_api = "SA_WORLD_FORCED_ENTRY"
+description = "Unlocked first door."
+points = 10
+
+[[achievement]]
+id = "locksmith"
+name = "Locksmith"
+steam_api = "SA_WORLD_LOCKSMITH"
+description = "Unlock 5 locked doors."
+points = 20
+
+[[achievement]]
+id = "professional"
+name = "Professional"
+steam_api = "SA_WORLD_PROFESSIONAL"
+description = "Unlock 20 locked doors."
+points = 50

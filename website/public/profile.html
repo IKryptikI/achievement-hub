@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profile · Achievement Hub</title>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Profile · Achievement Hub">
+<meta property="og:description" content="Achievements for the PC games that never had them. Free and open source.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap reveal" style="max-width:900px">
+  <div id="p"><p class="muted">Loading…</p></div>
+</div></section></main>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const tag = new URLSearchParams(location.search).get('u');
+  if (!tag) return ($('#p').innerHTML = '<p>No profile chosen.</p>');
+  let p;
+  try { p = await api('/users/' + encodeURIComponent(tag)); } catch (err) { return ($('#p').innerHTML = `<p>${esc(err.message)}</p>`); }
+  document.title = `${p.gamertag} · Achievement Hub`;
+  let favorite = '';
+  try { const g = (await games()).find((x) => x.id === p.favorite); if (g) favorite = g.title; } catch {}
+  const action = {
+    none: `<button class="btn primary" id="add">Add friend</button>`,
+    sent: `<span class="muted">Friend request sent</span>`,
+    received: `<button class="btn primary" id="acc">Accept friend request</button>`,
+    friend: `<span class="muted">Friends ✓</span>`,
+    self: `<a class="btn" href="account.html">Edit profile</a>`,
+  }[p.relation] || (await me() ? '' : `<a class="btn" href="login.html?next=${encodeURIComponent(location.pathname + location.search)}">Log in to add friend</a>`);
+  const status = p.sent !== undefined ? (online(p) ? `<span class="dot on"></span>${p.playing ? 'Playing ' + esc(p.playing) : 'Online'}` : '<span class="dot"></span>Offline') : '';
+  // Banner art (a game the player picked) and showcase (picked achievements).
+  let bannerArt = '', show = [];
+  try {
+    const list = await games();
+    const bg = list.find((x) => x.id === p.banner);
+    if (bg) { const d = await game(bg.id); bannerArt = d.banner || d.cover; }
+    const byGame = {};
+    for (const pick of (p.showcase || [])) { const [gid, aid] = pick.split('/'); (byGame[gid] ||= []).push(aid); }
+    for (const [gid, aids] of Object.entries(byGame)) {
+      try { const d = await game(gid); for (const aid of aids) { const a = d.achievements.find((x) => x.id === aid); if (a) show.push({ ...a, game: d.title, gid }); } } catch {}
+    }
+  } catch {}
+  const badgeIcons = { founder: '🌱', dev: '🛠️', mapper: '🗺️', complete: '💯', club: '🏆', collector: '📚', guide: '💬' };
+  $('#p').innerHTML = `
+    ${bannerArt ? `<div style="height:200px;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-60px;background:url('${esc(bannerArt)}') center/cover;mask-image:linear-gradient(#000 40%,transparent)"></div>` : ''}
+    <div class="gamercard" style="--accent:${esc(p.color)};position:relative">${pic(p)}
+      <div style="flex:1"><div class="tag">${esc(p.gamertag)}</div><div class="muted">${esc(p.motto)}</div>
+        <span class="gs">${p.gamerscore}</span> ${p.unlocked !== undefined ? `<span class="muted">· ${p.unlocked} achievements</span>` : ''}
+        <div style="margin-top:6px">${status}</div></div>
+      <div>${action}</div></div>
+    <div id="msg"></div>
+    ${(p.badges || []).length ? `<div class="row" style="margin-top:16px">${p.badges.map((b) => `<span class="chip testing" title="${esc(b.text)}" style="font-size:.85rem;padding:5px 12px">${badgeIcons[b.id] || '⭐'} ${esc(b.name)}</span>`).join('')}</div>` : ''}
+    ${show.length ? `<h2 style="margin-top:28px">Showcase</h2><div class="grid">${show.map((a) => `
+      <a class="card lift person" href="game.html?g=${encodeURIComponent(a.gid)}">${a.icon ? `<img src="${esc(a.icon)}" alt="" style="width:56px;height:56px;border-radius:10px">` : ''}
+        <div class="grow"><b>${esc(a.name)}</b><br><span class="muted" style="font-size:.9rem">${esc(a.game)}</span></div><span class="gs">${a.points}</span></a>`).join('')}</div>` : ''}
+    ${p.bio ? `<p style="margin-top:20px;white-space:pre-wrap">${esc(p.bio)}</p>` : ''}
+    ${favorite ? `<p class="muted">Favorite game: <b style="color:var(--text)">${esc(favorite)}</b></p>` : ''}
+    ${p.games === undefined
+      ? `<div class="card" style="margin-top:24px"><p class="muted">${esc(p.gamertag)} only shares their games with friends.</p></div>`
+      : `<h2 style="margin-top:30px">Games</h2>
+         <div class="grid">${p.games.length ? p.games.map((g) => `
+           <a class="card game lift" href="game.html?g=${encodeURIComponent(g.id)}${p.relation === 'friend' ? '&vs=' + encodeURIComponent(p.gamertag) : ''}"><h3>${esc(g.title)}</h3>
+             <span class="muted">${g.unlocked} of ${g.total} · <span class="gs">${g.points}</span> / ${g.total_points}</span>
+             <div class="bar"><i style="width:${g.total ? Math.round(100 * g.unlocked / g.total) : 0}%"></i></div>${p.relation === 'friend' ? '<span class="muted" style="font-size:.85rem">Compare →</span>' : ''}</a>`).join('') : '<p class="muted">No games yet.</p>'}</div>
+         <h2 style="margin-top:30px">Recent achievements</h2>
+         ${p.recent.length ? '<div class="grid">' + p.recent.slice(0, 12).map((r) => `
+           <div class="card"><b>${esc(r.name)}</b> <span class="gs" style="float:right">${r.points}</span><br>
+             <span class="muted">${esc(r.title)} · ${new Date(r.time * 1000).toLocaleDateString()}</span></div>`).join('') + '</div>' : '<p class="muted">None yet.</p>'}`}
+    <p class="muted" style="margin-top:30px">Member since ${new Date(p.member_since * 1000).toLocaleDateString()}</p>`;
+  const act = async (fn) => { try { await fn(); location.reload(); } catch (err) { note($('#msg'), err.message); } };
+  $('#add')?.addEventListener('click', () => act(() => api('/friends', { method: 'POST', body: { gamertag: p.gamertag } })));
+  $('#acc')?.addEventListener('click', () => act(() => api(`/friends/${encodeURIComponent(p.gamertag)}/accept`, { method: 'POST' })));
+});
+</script>
+</body></html>

@@ -1,0 +1,11 @@
+[target.i686-pc-windows-gnu]
+linker = "i686-w64-mingw32-gcc"
+# Bundle the C++/GCC runtimes (needed by imgui) so the DLL is self-contained.
+rustflags = [
+    "-L", "/usr/i686-w64-mingw32/sys-root/mingw/lib",
+    "-C", "link-args=-static-libgcc -static-libstdc++ -Wl,--enable-stdcall-fixup",
+]
+
+[env]
+# imgui-sys's build script links the C++ runtime; make it the static one.
+CXXSTDLIB_i686_pc_windows_gnu = "static=stdc++"

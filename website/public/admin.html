@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<title>Admin · Achievement Hub</title>
+<meta name="description" content="Admin"><meta name="robots" content="noindex">
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Admin · Achievement Hub">
+<meta property="og:description" content="Admin">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap reveal">
+  <h1>Admin</h1>
+  <div id="gate"></div>
+  <div id="body" hidden>
+    <div class="stats" id="counts"></div>
+    <h2 style="margin-top:36px">Mapper applications</h2>
+    <div class="filters" id="mtabs"></div>
+    <div id="mappers"></div>
+    <h2 style="margin-top:36px">Shared mappings</h2>
+    <p class="muted">From players' record mode. Download them, then run <code>scripts/merge-submissions.py ~/Downloads/shared-mappings.json</code> and <code>scripts/publish-db.sh</code>.</p>
+    <p><button class="btn" id="dlmap">Download new mappings (JSON)</button></p>
+    <div id="maps"></div>
+    <h2 style="margin-top:36px">Game requests</h2>
+    <div id="requests"></div>
+    <h2 style="margin-top:36px">Post news</h2>
+    <form id="nf" class="card"><input id="nt" placeholder="Title" maxlength="120"><textarea id="nb" rows="5" maxlength="8000" placeholder="What's new?" style="margin-top:10px"></textarea>
+      <div id="nmsg"></div><p style="margin:12px 0 0"><button class="btn primary">Publish</button></p></form>
+    <div id="news" style="margin-top:14px"></div>
+  </div>
+</div></section></main>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const m = await me();
+  if (!m || !m.is_admin) { $('#gate').innerHTML = '<p class="muted">This page is for the site admin.</p>'; return; }
+  $('#body').hidden = false;
+  let data, mtab = 'new';
+  const mstat = ['new', 'contacted', 'accepted', 'declined'];
+  async function load() {
+    data = await api('/admin/summary');
+    const c = data.counts;
+    $('#counts').innerHTML = [['Members', c.users], ['Linked apps', c.linked], ['Open requests', c.requests], ['Guides', c.guides]]
+      .map(([t, n]) => `<div class="card stat"><div class="n">${n}</div><div class="muted">${t}</div></div>`).join('');
+    draw();
+    const reqs = (await api('/requests')).requests;
+    $('#requests').innerHTML = reqs.map((r) => `<div class="ach"><b style="min-width:60px">▲ ${r.votes}</b><div class="body"><b>${esc(r.title)}</b><p>${esc(r.store)} ${r.by ? '· ' + esc(r.by) : ''} ${r.notes ? '· ' + esc(r.notes) : ''}</p></div>
+      <select data-req="${r.id}" style="width:auto">${['open', 'planned', 'added', 'declined'].map((s) => `<option${s === r.status ? ' selected' : ''}>${s}</option>`).join('')}</select></div>`).join('') || '<p class="muted">No requests.</p>';
+    const maps = (await api('/admin/mappings')).mappings;
+    $('#maps').innerHTML = maps.map((x) => `<div class="ach"><div class="body"><b>${esc(x.game)} / ${esc(x.achievement)}</b><p>${esc(x.gamertag || 'anonymous')} · ${new Date(x.created * 1000).toLocaleDateString()} · ${(x.data.candidates || []).length} candidate(s), ${x.data.recordings || 1} recording(s)</p></div>
+      <select data-mapst="${x.id}" style="width:auto">${['new', 'merged', 'rejected'].map((s) => `<option${s === x.status ? ' selected' : ''}>${s}</option>`).join('')}</select></div>`).join('') || '<p class="muted">None yet.</p>';
+    $('#dlmap').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(maps.filter((x) => x.status === 'new'), null, 1)], { type: 'application/json' })); a.download = 'shared-mappings.json'; a.click(); };
+    const news = (await api('/news')).news;
+    $('#news').innerHTML = news.map((n) => `<div class="ach"><div class="body"><b>${esc(n.title)}</b><p>${new Date(n.created * 1000).toLocaleDateString()}</p></div><button class="btn small danger" data-delnews="${n.id}">Delete</button></div>`).join('');
+  }
+  function draw() {
+    $('#mtabs').innerHTML = mstat.map((s) => `<button data-mt="${s}" class="${s === mtab ? 'on' : ''}">${s} ${data.mappers.filter((x) => x.status === s).length}</button>`).join('');
+    $('#mappers').innerHTML = data.mappers.filter((x) => x.status === mtab).map((x) => `
+      <div class="card" style="margin-bottom:12px">
+        <div class="row" style="justify-content:space-between"><h3 style="margin:0">${esc(x.name)} ${x.gamertag ? `<span class="muted">(${esc(x.gamertag)})</span>` : ''}</h3>
+          <select data-map="${x.id}" style="width:auto">${mstat.map((s) => `<option${s === x.status ? ' selected' : ''}>${s}</option>`).join('')}</select></div>
+        <p style="margin:6px 0"><a href="mailto:${esc(x.email)}?subject=Achievement%20Hub%20mapping">${esc(x.email)}</a>${x.discord ? ' · Discord: ' + esc(x.discord) : ''} · ${esc(x.platform)} · ${esc(x.hours)}</p>
+        ${x.games ? `<p><b>Games:</b> ${esc(x.games)}</p>` : ''}${x.experience ? `<p><b>Experience:</b> ${esc(x.experience)}</p>` : ''}${x.notes ? `<p><b>Notes:</b> ${esc(x.notes)}</p>` : ''}
+        <p class="muted" style="margin:0;font-size:.85rem">Applied ${new Date(x.created * 1000).toLocaleString()}</p></div>`).join('') || '<p class="muted">None.</p>';
+  }
+  document.addEventListener('click', async (e) => {
+    if (e.target.dataset.mt) { mtab = e.target.dataset.mt; draw(); }
+    if (e.target.dataset.delnews && confirm('Delete this post?')) { await api('/admin/news/' + e.target.dataset.delnews, { method: 'DELETE' }); load(); }
+  });
+  document.addEventListener('change', async (e) => {
+    if (e.target.dataset.map) { await api('/admin/mappers/' + e.target.dataset.map, { method: 'PATCH', body: { status: e.target.value } }); load(); }
+    if (e.target.dataset.mapst) { await api('/admin/mappings/' + e.target.dataset.mapst, { method: 'PATCH', body: { status: e.target.value } }); }
+    if (e.target.dataset.req) { await api('/admin/requests/' + e.target.dataset.req, { method: 'PATCH', body: { status: e.target.value } }); }
+  });
+  $('#nf').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try { await api('/admin/news', { method: 'POST', body: { title: $('#nt').value, body: $('#nb').value } }); $('#nt').value = $('#nb').value = ''; note($('#nmsg'), 'Published.', true); load(); }
+    catch (err) { note($('#nmsg'), err.message); }
+  });
+  load();
+});
+</script>
+</body></html>

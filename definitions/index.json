@@ -1,0 +1,61 @@
+{
+ "version": 1,
+ "games": [
+  {
+   "file": "fallout-3-goty.toml",
+   "id": "fallout-3-goty",
+   "title": "Fallout 3",
+   "achievements": 72,
+   "sha256": "7d370708a8f9e6d74074b97f2ff8cc442874455e706f0ee45d846b6f136c3f43"
+  },
+  {
+   "file": "oblivion.toml",
+   "id": "oblivion",
+   "title": "The Elder Scrolls IV: Oblivion",
+   "achievements": 60,
+   "sha256": "4f8c577a89df8a33416946c73daa30914c3627b49f12239e174333be2f684d6a"
+  },
+  {
+   "file": "re2-classic-gog-leon.toml",
+   "id": "re2-classic-gog",
+   "title": "Resident Evil 2",
+   "achievements": 60,
+   "sha256": "17a3131d48df7fdac8f781ede34a98894ce7aa29cd451cfbb612850a6dc1dc70"
+  },
+  {
+   "file": "saw.toml",
+   "id": "saw",
+   "title": "Saw",
+   "achievements": 46,
+   "sha256": "b4ae61bf7c2ffad887b67851a358da7c66c94fb4181d54b62f6cee0770aefbcd"
+  },
+  {
+   "file": "silent-hill-2-pc.toml",
+   "id": "silent-hill-2",
+   "title": "Silent Hill 2",
+   "achievements": 28,
+   "sha256": "507bcc8bff7a19d16fff54bc52c5e3de714593e84f049abd94514a171e958b84"
+  },
+  {
+   "file": "silent-hill-3-pc.toml",
+   "id": "silent-hill-3",
+   "title": "Silent Hill 3",
+   "achievements": 22,
+   "sha256": "0d5ca84ca86988fd9ac09e202c6f072bb44b505e405526bfe5bb71141527fb35"
+  },
+  {
+   "file": "spider-man-shattered-dimensions.toml",
+   "id": "spider-man-shattered-dimensions",
+   "title": "Spider-Man: Shattered Dimensions",
+   "achievements": 42,
+   "sha256": "07a235f88c6a7c939b3b78e38954dba97c0619462e4d2cdaae2d93bddd0094d1"
+  },
+  {
+   "file": "transformers-the-game.toml",
+   "id": "transformers-the-game",
+   "title": "Transformers: The Game",
+   "achievements": 42,
+   "sha256": "f600ceb4670f3188b65e4d960162349e88cf43fd3c6def9b8f3e4e888dbf45a1"
+  }
+ ]
+}

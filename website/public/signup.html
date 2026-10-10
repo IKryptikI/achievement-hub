@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign up · Achievement Hub</title>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Sign up · Achievement Hub">
+<meta property="og:description" content="Achievements for the PC games that never had them. Free and open source.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap card reveal" style="max-width:480px">
+  <h1>Create your account</h1>
+  <p class="muted">Your gamertag is how friends find you. Email is optional for now.</p>
+  <form id="f">
+    <label for="gt">Gamertag</label><input id="gt" required minlength="3" maxlength="16" autocomplete="username">
+    <label for="pw">Password</label><input id="pw" type="password" required minlength="8" autocomplete="new-password">
+    <label for="em">Email (optional)</label><input id="em" type="email" autocomplete="email">
+    <input id="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+    <div id="msg"></div>
+    <p style="margin-top:18px"><button class="btn primary">Create account</button></p>
+  </form>
+  <p class="muted">By signing up you agree to the <a href="terms.html">terms</a> and <a href="privacy.html">privacy policy</a>. Already have one? <a href="login.html">Log in</a>.</p>
+</div></section></main>
+<script>
+function showRecovery(code, next) {
+  document.body.insertAdjacentHTML('beforeend', `<div class="modal"><div class="card">
+    <h2>Save your recovery code</h2>
+    <p>If you ever forget your password, this code (with your gamertag) lets you set a new one. It's shown only once.</p>
+    <div class="code-big">${esc(code)}</div>
+    <div class="row"><button class="btn" id="cp">Copy</button><button class="btn" id="dl">Download as a file</button>
+      <button class="btn primary" id="go" style="margin-left:auto">I saved it</button></div></div></div>`);
+  $('#cp').onclick = () => navigator.clipboard.writeText(code).then(() => ($('#cp').textContent = 'Copied ✓'));
+  $('#dl').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([`Achievement Hub recovery code for ${$('#gt').value}:\n${code}\n`], { type: 'text/plain' })); a.download = 'achievement-hub-recovery-code.txt'; a.click(); };
+  $('#go').onclick = () => (location.href = next);
+}
+document.addEventListener('DOMContentLoaded', () => { passwordField($('#pw')); strengthMeter($('#pw')); });
+document.addEventListener('DOMContentLoaded', () => $('#f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    const r = await api('/signup', { method: 'POST', body: { gamertag: $('#gt').value, password: $('#pw').value, email: $('#em').value, website: $('#website').value } });
+    showRecovery(r.recovery_code, 'account.html?welcome=1');
+  } catch (err) { note($('#msg'), err.message); }
+}));
+</script>
+</body></html>

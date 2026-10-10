@@ -1,0 +1,291 @@
+# Transformers: The Game: achievements imported from Exophase (transformers-the-game-xbox-360), 42 total, 1000 points.
+# Achievements without `when` are listed but can't unlock yet (their
+# memory conditions haven't been found).
+
+[game]
+id = "transformers-the-game"
+title = "Transformers: The Game"
+icons_from = "exophase:transformers-the-game-xbox-360"
+
+[[build]]
+exe = "Transformers.exe"
+timestamp = 0x46660000
+image_size = 0x28e2fcc
+
+[[achievement]]
+id = "suburban_hero"
+name = "Suburban Hero"
+description = "Bumblebee helped protect Sam in The Suburbs"
+points = 25
+secret = true
+
+[[achievement]]
+id = "suburban_hero_challenger"
+name = "Suburban Hero Challenger"
+description = "Completed all challenge sub-missions in The Suburbs"
+points = 20
+secret = true
+
+[[achievement]]
+id = "neighbourhood_watch"
+name = "Neighbourhood Watch"
+description = "You continued your defense of The Suburbs as Jazz and Optimus Prime"
+points = 25
+secret = true
+
+[[achievement]]
+id = "neighborhood_watch_challenger"
+name = "Neighborhood Watch Challenger"
+description = "Completed all challenge sub-missions in the suburbs"
+points = 20
+secret = true
+
+[[achievement]]
+id = "could_you_describe_the_ruckus"
+name = "Could You Describe the Ruckus?"
+description = "Bumblebee caused a disturbance in order to escape the Hoover Dam with the AllSpark."
+points = 25
+secret = true
+
+[[achievement]]
+id = "the_ruckus_challenger"
+name = "The Ruckus? Challenger"
+description = "Completed all challenge sub-missions in Inside Hoover Dam"
+points = 20
+secret = true
+
+[[achievement]]
+id = "downtown_defender"
+name = "Downtown Defender"
+description = "The Last Stand has been made.  There's only one thing left to do…"
+points = 25
+secret = true
+
+[[achievement]]
+id = "downtown_defender_challenger"
+name = "Downtown Defender Challenger"
+description = "Completed all challenge sub-missions in Autobot City."
+points = 20
+secret = true
+
+[[achievement]]
+id = "look_to_the_stars"
+name = "Look to the Stars"
+description = "Megatron and the Decepticons are finished.  Earth is safe...for now…"
+points = 50
+secret = true
+
+[[achievement]]
+id = "sand_blaster"
+name = "Sand Blaster"
+description = "The humans have much to fear.  Qatar is destroyed."
+points = 25
+secret = true
+
+[[achievement]]
+id = "sand_blaster_challenger"
+name = "Sand Blaster Challenger"
+description = "Completed all challenge sub-missions in Qatar Desert."
+points = 20
+secret = true
+
+[[achievement]]
+id = "suburban_scourge"
+name = "Suburban Scourge"
+description = "The Autobots fall before you.  The Suburbs are done for."
+points = 25
+secret = true
+
+[[achievement]]
+id = "suburban_scourge_challenger"
+name = "Suburban Scourge Challenger"
+description = "Completed all challenge sub-missions in The Hunt for Sam Witwicky"
+points = 20
+secret = true
+
+[[achievement]]
+id = "air_traffic_destroyer"
+name = "Air Traffic Destroyer"
+description = "Starscream's power knows no bounds.  The airbase's defenses are obsolete."
+points = 25
+secret = true
+
+[[achievement]]
+id = "air_traffic_destroyer_challenger"
+name = "Air Traffic Destroyer Challenger"
+description = "Completed all challenge sub-missions in the Airbase"
+points = 20
+secret = true
+
+[[achievement]]
+id = "downtown_demolisher"
+name = "Downtown Demolisher"
+description = "The city is in ruins.  There's only one thing left to do…"
+points = 25
+secret = true
+
+[[achievement]]
+id = "downtown_demolisher_challenger"
+name = "Downtown Demolisher Challenger"
+description = "Completed all challenge sub-missions in the Decepticon City"
+points = 20
+secret = true
+
+[[achievement]]
+id = "finish_this_planet"
+name = "Finish this Planet"
+description = "Optimus and the Autobots are but a memory.  Earth is yours."
+points = 50
+secret = true
+
+[[achievement]]
+id = "pride_of_bumblebee"
+name = "Pride of Bumblebee"
+description = "You've scouted the world thoroughly.  All the secret icons have been collected."
+points = 60
+
+[[achievement]]
+id = "pride_of_megatron"
+name = "Pride of Megatron"
+description = "200 Autobot Drones have fallen before you."
+points = 20
+
+[[achievement]]
+id = "pride_of_optimus_prime"
+name = "Pride of Optimus Prime"
+description = "200 Decepticon Drones have met their match."
+points = 20
+
+[[achievement]]
+id = "transform_and_roll_out"
+name = "Transform and Roll Out"
+description = "You've transformed for the first time"
+points = 10
+
+[[achievement]]
+id = "robots_in_disguise"
+name = "Robots in Disguise"
+description = "You've transformed 500 times."
+points = 25
+
+[[achievement]]
+id = "keeper_of_the_allspark"
+name = "Keeper of the AllSpark"
+description = "There is no Transformer that stands greater than you.  You have achieved 100% completion."
+points = 75
+
+[[achievement]]
+id = "batter_up"
+name = "Batter Up"
+description = "Find a bat and make your enemy fly."
+points = 10
+secret = true
+
+[[achievement]]
+id = "weapon_systems_inactive"
+name = "Weapon Systems Inactive"
+description = "Your enemy knows the might of your fist.  Complete Suburbs Chapter 1 using only melee attacks"
+points = 20
+secret = true
+
+[[achievement]]
+id = "land_shark"
+name = "Land Shark"
+description = "The enemy can't hit you if they can't see you.  Spend 2 minutes underground."
+points = 10
+secret = true
+
+[[achievement]]
+id = "sharp_shooter"
+name = "Sharp Shooter"
+description = "You're destructive and efficient.  Complete Airbase Chapter 3 with more than 2:30 minutes remaining."
+points = 40
+secret = true
+
+[[achievement]]
+id = "i_know_kung_fu"
+name = "I know Kung-Fu"
+description = "You are quite skilled Grasshoppa.  Perform 1000 punches"
+points = 30
+secret = true
+
+[[achievement]]
+id = "sideways_motion"
+name = "Sideways Motion"
+description = "You can handle turns with ease.  Achieved full Slide Skill."
+points = 15
+
+[[achievement]]
+id = "turbo_we_don_t_need_no_turbo"
+name = "Turbo? We don’t need no turbo!"
+description = "You've got a lead foot and it shows.  Complete Hoover Internal Chapter 2 without using boost."
+points = 30
+secret = true
+
+[[achievement]]
+id = "ring_a_ding_ding"
+name = "Ring-A-Ding-Ding"
+description = "Dial up some pain for your enemy.  Use the Helio phone as a weapon."
+points = 10
+secret = true
+
+[[achievement]]
+id = "pit_crew"
+name = "Pit Crew"
+description = "Stop your enemy in their tracks!!  Use a large tire to harm your enemy."
+points = 10
+secret = true
+
+[[achievement]]
+id = "wrong_way"
+name = "Wrong Way!"
+description = "You're living dangerously.  Ram 250 Cars"
+points = 15
+
+[[achievement]]
+id = "shot_putter"
+name = "Shot Putter"
+description = "You've sent objects flying.  Achieved full Throw Skill."
+points = 15
+
+[[achievement]]
+id = "speed_demon"
+name = "Speed Demon"
+description = "You've really burned rubber.  Achieved full Speed Skill."
+points = 15
+
+[[achievement]]
+id = "what_challenge"
+name = "What Challenge?"
+description = "You have handled a challenge with ease. Complete your first Challenge sub-mission."
+points = 10
+
+[[achievement]]
+id = "pride_of_ironhide"
+name = "Pride of Ironhide"
+description = "You are the epitome of an Autobot.  Achieved full Heroic Skill."
+points = 15
+
+[[achievement]]
+id = "pride_of_brawl"
+name = "Pride of Brawl"
+description = "Your destruction comes naturally as a Decepticon.  Achieved full Destruction Skill."
+points = 15
+
+[[achievement]]
+id = "mad_skillz"
+name = "Mad Skillz"
+description = "You are skilled beyond belief.  Achieved all Skill items on all levels"
+points = 40
+
+[[achievement]]
+id = "we_don_t_need_roads"
+name = "We Don't Need Roads"
+description = "Who needs roads when you can fly through the air? Achieved full Jump Skill."
+points = 15
+
+[[achievement]]
+id = "root_of_all_evil"
+name = "Root of all Evil"
+description = "You take pride in destroying your enemies.  Achieved full Evil Skill."
+points = 15

@@ -1,0 +1,283 @@
+# Spider-Man: Shattered Dimensions: the Xbox 360 list (42 achievements, 1000G).
+# Descriptions and secret flags from the PS3 list (same achievements); the PC
+# release had none. No conditions yet: record mode maps them while playing.
+
+[game]
+id = "spider-man-shattered-dimensions"
+title = "Spider-Man: Shattered Dimensions"
+developer = "Beenox"
+publisher = "Activision"
+year = 2010
+icons_from = "exophase:spider-man-shattered-dimensions"
+
+[[build]]
+exe = "Game.exe"
+timestamp = 0x4cbe0a82
+image_size = 0xa56000
+
+[[achievement]]
+id = "lead_on_m_dubs"
+name = "Lead on, M-Dubs!"
+description = "Complete the Tutorial"
+points = 5
+
+[[achievement]]
+id = "end_of_act_1"
+name = "End of Act 1"
+description = "Complete Act 1 on any difficulty level"
+points = 20
+
+[[achievement]]
+id = "end_of_act_2"
+name = "End of Act 2"
+description = "Complete Act 2 on any difficulty level"
+points = 20
+
+[[achievement]]
+id = "end_of_act_3"
+name = "End of Act 3"
+description = "Complete Act 3 on any difficulty level"
+points = 20
+
+[[achievement]]
+id = "easy_as_pie"
+name = "Easy as pie!"
+description = "Complete all levels on Easy"
+points = 20
+
+[[achievement]]
+id = "is_this_normal"
+name = "Is this normal?"
+description = "Complete all levels on Normal"
+points = 50
+
+[[achievement]]
+id = "hard_pressed"
+name = "Hard pressed"
+description = "Complete all levels on Hard"
+points = 100
+
+[[achievement]]
+id = "survival_of_the_fittest"
+name = "Survival of the fittest"
+description = "Defeat Kraven on any difficulty level"
+points = 15
+secret = true
+
+[[achievement]]
+id = "something_can_stop_juggernaut"
+name = "Something CAN stop Juggernaut!"
+description = "Defeat Juggernaut on any difficulty level"
+points = 15
+secret = true
+
+[[achievement]]
+id = "here_s_mud_in_your_eye"
+name = "Here's mud in your eye!"
+description = "Defeat Sandman on any difficulty level"
+points = 15
+secret = true
+
+[[achievement]]
+id = "now_there_s_a_shock"
+name = "Now there's a shock"
+description = "Defeat Electro on any difficulty level"
+points = 15
+secret = true
+
+[[achievement]]
+id = "canceled"
+name = "Canceled!"
+description = "Defeat Deadpool on any difficulty level"
+points = 15
+secret = true
+
+[[achievement]]
+id = "minimized_carnage"
+name = "Minimized Carnage"
+description = "Defeat Carnage on any difficulty level"
+points = 15
+secret = true
+
+[[achievement]]
+id = "clipped_wings"
+name = "Clipped wings"
+description = "Defeat Hobgoblin on any difficulty level"
+points = 15
+secret = true
+
+[[achievement]]
+id = "took_the_sting_out_of_him"
+name = "Took the sting out of him"
+description = "Defeat Scorpion on any difficulty level"
+points = 15
+secret = true
+
+[[achievement]]
+id = "lay_down_your_arms"
+name = "Lay down your arms"
+description = "Defeat Doc Ock on any difficulty level"
+points = 15
+secret = true
+
+[[achievement]]
+id = "the_caged_bird_squawks"
+name = "The caged bird squawks"
+description = "Defeat Vulture on any difficulty level"
+points = 15
+secret = true
+
+[[achievement]]
+id = "the_hammer_falls"
+name = "The hammer falls"
+description = "Defeat Hammerhead on any difficulty level"
+points = 15
+secret = true
+
+[[achievement]]
+id = "circus_freak"
+name = "Circus freak"
+description = "Defeat Goblin on any difficulty level"
+points = 15
+secret = true
+steam_name = "Freak show"  # its name in the icon source (PS3)
+
+[[achievement]]
+id = "final_curtain_call"
+name = "Final curtain call"
+description = "Defeat Mysterio on any difficulty level"
+points = 50
+secret = true
+
+[[achievement]]
+id = "getting_warmed_up"
+name = "Getting warmed up"
+description = "Defeat 100 enemies"
+points = 10
+
+[[achievement]]
+id = "in_the_zone"
+name = "In the zone"
+description = "Defeat 500 enemies"
+points = 20
+
+[[achievement]]
+id = "ain_t_no_stoppin"
+name = "Ain't no stoppin'!"
+description = "Defeat 1000 enemies"
+points = 50
+
+[[achievement]]
+id = "manifest_destiny"
+name = "Manifest Destiny"
+description = "Complete the Web of Destiny"
+points = 100
+
+[[achievement]]
+id = "bug_collector"
+name = "Bug collector"
+description = "Collect the Hidden Spiders"
+points = 50
+
+[[achievement]]
+id = "the_complete_package"
+name = "The complete package"
+description = "Unlock all Character Upgrades"
+points = 20
+
+[[achievement]]
+id = "smooth_moves"
+name = "Smooth moves"
+description = "Unlock all Combat Upgrades"
+points = 20
+
+[[achievement]]
+id = "uncle_benjamin"
+name = "Uncle Benjamin"
+description = "Execute a 100-hit combo"
+points = 10
+
+[[achievement]]
+id = "two_hundo"
+name = "Two hundo"
+description = "Execute a 200-hit combo"
+points = 20
+
+[[achievement]]
+id = "missed_me"
+name = "Missed me!"
+description = "Defeat a boss on any difficulty level without taking damage"
+points = 20
+
+[[achievement]]
+id = "close_call"
+name = "Close call!"
+description = "Recover 10 times from a Critical Fall"
+points = 10
+
+[[achievement]]
+id = "amazing"
+name = "Amazing!"
+description = "Complete 4 levels with the highest rank in Hard mode"
+points = 20
+
+[[achievement]]
+id = "sensational"
+name = "Sensational!!"
+description = "Complete 8 levels with the highest rank in Hard mode"
+points = 30
+
+[[achievement]]
+id = "spectacular"
+name = "Spectacular!!!"
+description = "Complete 12 levels with the highest rank in Hard mode"
+points = 50
+
+[[achievement]]
+id = "hobbyist"
+name = "Hobbyist"
+description = "Collect 125 Spider Emblems"
+points = 10
+
+[[achievement]]
+id = "enthusiast"
+name = "Enthusiast"
+description = "Collect 250 Spider Emblems"
+points = 15
+
+[[achievement]]
+id = "fanatic"
+name = "Fanatic"
+description = "Collect 500 Spider Emblems"
+points = 20
+
+[[achievement]]
+id = "no_harm_done"
+name = "No harm done"
+description = "Complete any level without dying (except the Tutorial)"
+points = 20
+secret = true
+
+[[achievement]]
+id = "the_spider_s_shadow"
+name = "The Spider's shadow"
+description = "Complete a Noir level without triggering an alarm"
+points = 10
+
+[[achievement]]
+id = "the_spider_s_bite"
+name = "The Spider's bite"
+description = "Keep Rage Mode active for one minute"
+points = 10
+
+[[achievement]]
+id = "the_spider_s_grace"
+name = "The Spider's grace"
+description = "Complete a 2099 freefall section without taking damage"
+points = 10
+
+[[achievement]]
+id = "the_spider_s_web"
+name = "The Spider's web"
+description = "Defeat 50 enemies using the Amazing Charge Attack"
+points = 10

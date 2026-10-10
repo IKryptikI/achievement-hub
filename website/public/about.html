@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About & credits · Achievement Hub</title>
+<meta name="description" content="Why Achievement Hub exists, how it works, and the people and projects it builds on.">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="About & credits · Achievement Hub">
+<meta property="og:description" content="Why Achievement Hub exists, how it works, and the people and projects it builds on.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap reveal" style="max-width:860px">
+  <h1>About</h1>
+  <p>Achievement Hub started with a simple wish: earning achievements in the classic PC versions of games that had them on console, like Resident Evil, Silent Hill and Fallout 3. It's a free, open-source project for players who love older games.</p>
+  <h2>How it works</h2>
+  <ul class="plain">
+    <li><b>The overlay</b> loads inside the game and reads the game's own memory (never writing to it) to see when you earn something. It draws pop-ups and a dashboard styled after the Xbox 360.</li>
+    <li><b>The game database</b> holds each game's achievement list and the rules that unlock them. It's public on <a href="https://github.com/IKryptikI/achievement-hub-games" target="_blank" rel="noopener">GitHub</a>, so anyone can add or improve games.</li>
+    <li><b>Record mode</b> lets players map achievements by playing: press a button right after earning one, and the overlay works out what changed in the game. Shared findings go into the database for everyone.</li>
+    <li><b>No anti-cheat games, ever.</b> Games with anti-cheat are detected and blocked, so nobody risks a ban.</li>
+  </ul>
+  <h2>Open source</h2>
+  <p>The code is on <a id="src" href="#" target="_blank" rel="noopener">GitHub</a> under the GPL-3.0 license: use it, study it, change it, and share your changes under the same terms.</p>
+
+  <h2 id="credits">Credits</h2>
+  <p class="muted">Achievement Hub stands on a lot of other people's work. Thank you.</p>
+  <div class="grid">
+    <div class="card"><h3>hudhook</h3><p class="muted">Rendering the overlay inside games (MIT). <a href="https://github.com/veeenu/hudhook" target="_blank" rel="noopener">veeenu/hudhook</a></p></div>
+    <div class="card"><h3>Dear ImGui &amp; imgui-rs</h3><p class="muted">The overlay's interface toolkit (MIT).</p></div>
+    <div class="card"><h3>egui / eframe</h3><p class="muted">The desktop app's interface (MIT/Apache-2.0).</p></div>
+    <div class="card"><h3>Wine, Proton &amp; DXVK</h3><p class="muted">Making Windows games, and this overlay, run on Linux.</p></div>
+    <div class="card"><h3>Exophase</h3><p class="muted">Achievement and trophy lists and icons for many games.</p></div>
+    <div class="card"><h3>Wikipedia</h3><p class="muted">Game descriptions (CC BY-SA), credited where they appear.</p></div>
+    <div class="card"><h3>LaunchBox Games Database</h3><p class="muted">Developer, publisher and release-year details.</p></div>
+    <div class="card"><h3>Steam &amp; GOG</h3><p class="muted">Store descriptions and screenshots for the games you own there.</p></div>
+    <div class="card"><h3>XBMC360 / MC360 skin authors</h3><p class="muted">The dashboard-style theme pack is converted from your own copy of their skin; it isn't distributed here.</p></div>
+    <div class="card"><h3>Team Silent, Capcom, Bethesda &amp; more</h3><p class="muted">For the games themselves. All game names and achievement texts belong to their owners; this project isn't affiliated with them or with Microsoft.</p></div>
+    <div class="card"><h3>Selawik</h3><p class="muted">The interface font (SIL Open Font License).</p></div>
+    <div class="card"><h3>The community</h3><p class="muted">Everyone who requests games, maps achievements with record mode, and reports bugs.</p></div>
+  </div>
+</div></section></main>
+<script>document.addEventListener('DOMContentLoaded', () => { $('#src').href = SITE.github; });</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<title>FAQ <title>News & changelog · Achievement Hub</title> support · Achievement Hub</title>
+<meta name="description" content="Answers to common questions about Achievement Hub, and how to get help.">
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="FAQ content="News & changelog · Achievement Hub" support · Achievement Hub">
+<meta property="og:description" content="Answers to common questions about Achievement Hub, and how to get help.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap reveal" style="max-width:860px">
+  <h1>FAQ &amp; support</h1>
+  <div id="faq"></div>
+  <div class="card" style="margin-top:30px"><h3>Still stuck?</h3>
+    <p class="muted" style="margin:0">Open an issue on <a href="https://github.com/IKryptikI/achievement-hub/issues" target="_blank" rel="noopener">GitHub</a>, or request help through the app (Request a Game → note). Include the <code>overlay.log</code> file from the game's folder; it says what went wrong.</p></div>
+</div></section></main>
+<style>.qa{border-bottom:1px solid var(--line)}.qa summary{cursor:pointer;padding:16px 4px;font-size:1.08rem;font-weight:600;list-style:none;display:flex;justify-content:space-between}.qa summary::after{content:'+';color:var(--green-hi);transition:transform .2s}.qa[open] summary::after{transform:rotate(45deg)}.qa div{padding:0 4px 16px;color:var(--muted)}</style>
+<script>
+const QA = [
+  ['Is it safe? Can I get banned?', 'Achievement Hub only reads the memory of the game it runs inside, the way a speedrun timer does. It never changes the game, and it refuses to run in any game with anti-cheat, so nobody risks a ban.'],
+  ['Which games work?', 'See the <a href="games.html">Games</a> page. Each game shows which achievements are confirmed, which need testing and which aren\'t mapped yet. Vote for others on <a href="requests.html">Requests</a>.'],
+  ['How do I open the overlay?', 'Shift+F2 on the keyboard, or the Xbox/guide button on a controller (Back+Start also works).'],
+  ['An achievement didn\'t pop. Why?', 'It may not be mapped yet (check the game\'s page), or it\'s "Needs testing" and you just found a problem. Tell us through the app with the overlay.log from the game folder.'],
+  ['Does it work on Linux / Steam Deck?', 'Yes: Linux is where it started. Games running through Proton, Wine, Heroic, Bottles or Lutris all work.'],
+  ['What is record mode?', 'An optional mode for people who want to help map achievements. It\'s off unless you turn it on in the app. See <a href="mappers.html">Become a mapper</a>.'],
+  ['Do I need an account?', 'No. The app and overlay work fully offline. An account just adds your profile, friends and leaderboards.'],
+  ['I forgot my password.', 'Use your recovery code on the <a href="recover.html">reset page</a>, or reset it from the linked app (Friends → Forgot your website password?).'],
+  ['Is it really free?', 'Yes, and open source under the GPL-3.0. No ads, no paid tier.'],
+];
+document.addEventListener('DOMContentLoaded', () => {
+  $('#faq').innerHTML = QA.map(([q, a]) => `<details class="qa"><summary>${q}</summary><div>${a}</div></details>`).join('');
+});
+</script>
+</body></html>

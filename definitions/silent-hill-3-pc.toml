@@ -1,0 +1,180 @@
+# Silent Hill 3 (PC), achievements imported from Silent Hill HD Collection
+# (Xbox 360, 2012), which split one 1000G list between SH2 and SH3; this
+# game's share is 500G. Source: Exophase "Silent Hill HD" (Xbox 360).
+# Build: sh3.exe (2003 PC release).
+# Achievements without `when` are listed but can't unlock yet (their
+# memory conditions haven't been found).
+
+[game]
+id = "silent-hill-3"
+title = "Silent Hill 3"
+developer = "Konami Computer Entertainment Tokyo"
+publisher = "Konami"
+# (Description adapted from Wikipedia, CC BY-SA 4.0. Art: the HD Collection's
+# Xbox 360 dashboard background, fetched per player into their profile.)
+description = "A direct sequel to the first Silent Hill: teenager Heather Mason becomes entangled in the schemes of the town's cult, which seeks to revive a malevolent deity."
+art_url = "https://m.exophase.com/xbox/games/o/35011.png"
+year = 2003
+# Official icons: the HD Collection's Xbox 360 list, fetched per player into
+# their profile (never shipped).
+icons_from = "exophase:silent-hill-hd-xbox-360"
+
+[[build]]
+exe = "sh3.exe"
+timestamp = 0x3f557c0c
+image_size = 0x6d7c0a8
+
+[[achievement]]
+id = "time_to_roll_the_credits"
+name = "Time to Roll the Credits"
+description = "Unlock all Achievements in SH3."
+category = "Platinum"
+points = 50
+platinum = true
+
+[[achievement]]
+id = "i_m_normal_i_promise"
+name = "I'm Normal I Promise"
+description = "Unlock the \"Normal\" ending."
+category = "Endings"
+points = 10
+
+[[achievement]]
+id = "it_was_all_in_your_head"
+name = "It Was All in Your Head"
+description = "Unlock the \"Possessed\" ending."
+category = "Endings"
+points = 15
+
+[[achievement]]
+id = "coolest_dad_ever"
+name = "Coolest. Dad. Ever."
+description = "Unlock the \"UFO\" ending."
+category = "Endings"
+points = 25
+
+[[achievement]]
+id = "adrenaline_junkie"
+name = "Adrenaline Junkie"
+description = "Complete SH3 in 3 hours or less."
+category = "Challenges"
+points = 25
+
+[[achievement]]
+id = "wall_basher"
+name = "Wall Basher"
+description = "Acquire the Silencer."
+category = "Items & Weapons"
+points = 20
+
+[[achievement]]
+id = "there_s_a_new_sheriff_in_town"
+name = "There's a New Sheriff in Town"
+description = "Acquire the Beam Saber."
+category = "Items & Weapons"
+points = 40
+
+[[achievement]]
+id = "flame_on"
+name = "Flame On"
+description = "Acquire the Flamethrower."
+category = "Items & Weapons"
+points = 40
+
+[[achievement]]
+id = "what_the_hill_just_happened"
+name = "What the Hill Just Happened?"
+description = "Acquire the Gold and Silver pipes."
+category = "Items & Weapons"
+points = 40
+
+[[achievement]]
+id = "makes_my_head_hurt"
+name = "Makes My Head Hurt"
+description = "Complete SH3 with 2 saves or less."
+category = "Challenges"
+points = 30
+
+[[achievement]]
+id = "if_looks_could_kill"
+name = "If Looks Could Kill"
+description = "Unlock the Heather Beam."
+category = "Items & Weapons"
+points = 25
+
+[[achievement]]
+id = "where_s_luna"
+name = "Where's Luna?"
+description = "Unlock the \"Princess Heart\" costume"
+category = "Items & Weapons"
+points = 25
+
+[[achievement]]
+id = "heather_s_got_a_gun"
+name = "Heather's Got a Gun"
+description = "Acquire the Unlimited Submachine Gun."
+category = "Items & Weapons"
+points = 15
+
+[[achievement]]
+id = "pest_control"
+name = "Pest Control"
+description = "Defeat Split Worm in under 2 minutes."
+category = "Bosses"
+points = 15
+
+[[achievement]]
+id = "eye_for_an_eye"
+name = "Eye For an Eye"
+description = "Defeat Missionary in under 2 minutes."
+category = "Bosses"
+points = 15
+
+[[achievement]]
+id = "a_time_to_kill"
+name = "A Time to Kill"
+description = "Defeat Leonard in under 3 minutes."
+category = "Bosses"
+points = 15
+
+[[achievement]]
+id = "lost_memory"
+name = "Lost Memory"
+description = "Defeat Memory of Alessa in under 3 minutes."
+category = "Bosses"
+points = 15
+
+[[achievement]]
+id = "blasphemy"
+name = "Blasphemy"
+description = "Defeat God in under 8 minutes."
+category = "Bosses"
+points = 15
+
+[[achievement]]
+id = "this_isn_t_an_fps"
+name = "This Isn't an FPS!"
+description = "Defeat at least 75 enemies by shooting in SH3."
+category = "Challenges"
+points = 15
+
+[[achievement]]
+id = "they_look_like_monsters_to_you"
+name = "They Look like Monsters to You?"
+description = "Defeat at least 75 enemies by fighting in SH3."
+category = "Challenges"
+points = 15
+
+[[achievement]]
+id = "hoarder"
+name = "Hoarder"
+description = "Pick up at least 100 items in SH3."
+category = "Challenges"
+points = 15
+
+[[achievement]]
+id = "ninja"
+name = "Ninja"
+description = "Receive less than 500 points of damage in one game, in SH3."
+category = "Challenges"
+points = 20

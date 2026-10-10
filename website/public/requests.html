@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<title>Game requests · Achievement Hub</title>
+<meta name="description" content="Request PC games for Achievement Hub and vote on what gets added next.">
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Game requests · Achievement Hub">
+<meta property="og:description" content="Request PC games for Achievement Hub and vote on what gets added next.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap reveal" style="max-width:900px">
+  <h1>Game requests</h1>
+  <p class="muted">Vote for the games you want next. The most-wanted ones get mapped first. Games with anti-cheat can't be added.</p>
+  <form id="f" class="card" style="margin:22px 0">
+    <h3>Request a game</h3>
+    <div class="row">
+      <div style="flex:2;min-width:220px"><input id="title" placeholder="Game title" maxlength="120"></div>
+      <div style="flex:1;min-width:150px"><select id="store"><option value="">Where you have it</option><option>Steam</option><option>GOG</option><option>Epic</option><option>Disc / other</option></select></div>
+    </div>
+    <textarea id="notes" rows="2" maxlength="500" placeholder="Anything we should know? (optional)" style="margin-top:10px"></textarea>
+    <input id="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+    <div id="msg"></div>
+    <p style="margin:12px 0 0"><button class="btn primary">Request it</button></p>
+  </form>
+  <div class="filters" id="tabs"></div>
+  <div id="list"><div class="skel" style="height:80px;margin-bottom:10px"></div><div class="skel" style="height:80px"></div></div>
+</div></section></main>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const m = await me();
+  if (!m) $('#f').innerHTML = '<h3>Request a game</h3><p class="muted" style="margin:0"><a href="login.html?next=requests.html">Log in</a> or <a href="signup.html">sign up</a> to request games and vote.</p>';
+  let all = [], tab = 'open';
+  const label = { open: 'Wanted', planned: 'Planned', added: 'Added', declined: 'Not possible' };
+  function draw() {
+    $('#tabs').innerHTML = Object.entries(label).map(([k, t]) => `<button data-t="${k}" class="${k === tab ? 'on' : ''}">${t} ${all.filter((r) => r.status === k).length}</button>`).join('');
+    const shown = all.filter((r) => r.status === tab);
+    $('#list').innerHTML = shown.map((r) => `
+      <div class="ach"><button class="btn small${r.mine ? ' primary' : ''}" data-vote="${r.id}" title="${r.mine ? 'Remove your vote' : 'Vote'}" style="min-width:74px">▲ ${r.votes}</button>
+        <div class="body"><b>${esc(r.title)}</b><p>${esc([r.store, r.by && 'asked by ' + r.by].filter(Boolean).join(' · '))}${r.notes ? ' · ' + esc(r.notes) : ''}</p></div>
+        <span class="chip ${r.status === 'added' ? 'confirmed' : r.status === 'planned' ? 'testing' : 'unmapped'}">${label[r.status]}</span></div>`).join('')
+      || '<p class="muted">Nothing here yet.</p>';
+  }
+  async function load() { try { all = (await api('/requests')).requests; } catch { all = []; } draw(); }
+  document.addEventListener('click', async (e) => {
+    const t = e.target.closest('[data-t]'), v = e.target.closest('[data-vote]');
+    if (t) { tab = t.dataset.t; draw(); }
+    if (v) { if (!m) return (location.href = 'login.html?next=requests.html'); try { await api(`/requests/${v.dataset.vote}/vote`, { method: 'POST' }); load(); } catch (err) { note($('#msg'), err.message); } }
+  });
+  $('#f').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try { await api('/requests', { method: 'POST', body: { title: $('#title').value, store: $('#store').value, notes: $('#notes').value, website: $('#website').value } });
+      $('#title').value = ''; $('#notes').value = ''; note($('#msg'), 'Requested! Your vote is in.', true); tab = 'open'; load(); }
+    catch (err) { note($('#msg'), err.message); }
+  });
+  load();
+});
+</script>
+</body></html>

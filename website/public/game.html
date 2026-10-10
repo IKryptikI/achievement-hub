@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game · Achievement Hub</title>
+<meta name="theme-color" content="#070b10">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Game · Achievement Hub">
+<meta property="og:description" content="Achievements for the PC games that never had them. Free and open source.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main>
+<div class="gamehero"><div class="bg" id="bg"></div><div class="wrap">
+  <p><a href="games.html">← All games</a></p>
+  <div class="gamehead" id="head"><div class="skel" style="width:200px;aspect-ratio:2/3"></div><div style="flex:1"><div class="skel" style="height:56px;max-width:420px;margin-bottom:14px"></div><div class="skel" style="height:22px;max-width:300px"></div></div></div>
+</div></div>
+<section style="padding-top:20px"><div class="wrap">
+  <div class="filters" id="views"></div>
+  <div id="ach-view">
+    <div class="row" style="justify-content:space-between">
+      <div class="filters" id="filters"></div>
+      <div class="row"><select id="vs" style="width:auto;display:none"></select><input id="q" placeholder="Search achievements…" style="max-width:240px"></div>
+    </div>
+    <div id="legend" class="muted" style="font-size:.92rem;margin-bottom:16px"></div>
+    <div id="list"><div class="skel" style="height:92px;margin-bottom:10px"></div><div class="skel" style="height:92px;margin-bottom:10px"></div><div class="skel" style="height:92px"></div></div>
+  </div>
+  <div id="board-view" hidden></div>
+</div></section>
+</main>
+<style>
+.tips { margin-top: 10px; padding: 12px 14px; border-radius: 10px; background: rgba(0,0,0,.25); border: 1px solid var(--line); }
+.tip { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); } .tip:last-child { border: 0; }
+.tip p { margin: 2px 0 0; color: var(--text); white-space: pre-wrap; }
+.vsmark { display: inline-flex; gap: 6px; margin-left: 8px; }
+.vsmark span { font-size: .78rem; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); }
+.vsmark span.y { border-color: var(--green); color: var(--green-hi); }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('g'), vs = params.get('vs');
+  let g, stats = { players: 0, unlocks: {}, mine: [] }, guides = [], compare = null;
+  try { g = await game(id); } catch { $('#head').innerHTML = '<p>That game isn\'t in the database.</p>'; return; }
+  const viewer = await me();
+  try { stats = await api(`/games/${encodeURIComponent(id)}/stats`); } catch {}
+  try { guides = (await api(`/games/${encodeURIComponent(id)}/guides`)).guides; } catch {}
+  if (vs) { try { compare = await api(`/compare/${encodeURIComponent(vs)}/${encodeURIComponent(id)}`); } catch (e) { compare = { error: e.message }; } }
+  document.title = `${g.title} · Achievement Hub`;
+  const art = g.banner || g.cover;
+  if (art) $('#bg').style.backgroundImage = `url("${art}")`;
+
+  const status = (a) => (stats.unlocks[a.id] ? 'confirmed' : a.tracked ? 'testing' : 'unmapped');
+  const counts = { confirmed: 0, testing: 0, unmapped: 0 };
+  g.achievements.forEach((a) => counts[status(a)]++);
+  const mine = new Set(stats.mine || []);
+  const theirs = compare && compare.them ? new Set(compare.them.unlocked) : null;
+  const myPts = g.achievements.filter((a) => mine.has(a.id)).reduce((s, a) => s + a.points, 0);
+  const mapped = Math.round((100 * (counts.confirmed + counts.testing)) / g.achievements.length);
+  const rarity = (a) => (stats.players >= 3 ? Math.round((100 * (stats.unlocks[a.id] || 0)) / stats.players) : null);
+
+  $('#head').innerHTML = `
+    <div class="cover">${g.cover ? `<img src="${esc(g.cover)}" alt="">` : `<div class="noart">${esc(g.title)}</div>`}</div>
+    <div style="flex:1;min-width:240px">
+      <h1 style="margin-bottom:.15em">${esc(g.title)}</h1>
+      <p class="muted">${[g.subtitle, g.developer, g.publisher, g.year].filter(Boolean).map(esc).join(' · ')}</p>
+      <div class="row">
+        <span class="gs" style="font-size:1.3rem">${g.points}</span><span class="muted">· ${g.achievements.length} achievements</span>
+        ${stats.players ? `<span class="muted">· ${stats.players} player${stats.players === 1 ? '' : 's'}</span>` : ''}
+      </div>
+      ${mine.size ? `<p style="margin-top:10px"><b>You:</b> ${mine.size} of ${g.achievements.length} · <span class="gs">${myPts}</span></p>` : ''}
+      ${compare && compare.them ? `<p style="margin-top:4px"><b>${esc(compare.them.gamertag)}:</b> ${theirs.size} of ${g.achievements.length} · <span class="gs">${g.achievements.filter((a) => theirs.has(a.id)).reduce((s, a) => s + a.points, 0)}</span> <a href="?g=${encodeURIComponent(id)}">stop comparing</a></p>` : ''}
+      ${compare && compare.error ? `<p class="muted">${esc(compare.error)}</p>` : ''}
+    </div>
+    <div class="ringstat" id="ring"><div><b>${mapped}%</b>mapped</div></div>`;
+  setTimeout(() => ($('#ring').style.background = `conic-gradient(var(--green) ${mapped}%, rgba(255,255,255,.08) 0)`), 80);
+
+  // Compare with a friend.
+  if (viewer) {
+    try {
+      const friends = (await api('/friends')).friends.filter((f) => f.status === 'friend');
+      if (friends.length) {
+        $('#vs').style.display = '';
+        $('#vs').innerHTML = '<option value="">Compare with…</option>' + friends.map((f) => `<option${f.gamertag === vs ? ' selected' : ''}>${esc(f.gamertag)}</option>`).join('');
+        $('#vs').onchange = () => (location.search = `?g=${encodeURIComponent(id)}` + ($('#vs').value ? `&vs=${encodeURIComponent($('#vs').value)}` : ''));
+      }
+    } catch {}
+  }
+
+  $('#legend').innerHTML = `<span class="chip confirmed">Confirmed</span> players have unlocked it with Achievement Hub ·
+    <span class="chip testing">Needs testing</span> mapped, waiting for its first unlock ·
+    <span class="chip unmapped">Not mapped</span> can't unlock yet (<a href="mappers.html">help map it</a>)`;
+  let filter = 'all', view = 'achievements';
+  const tabs = [['all', `All ${g.achievements.length}`], ['confirmed', `Confirmed ${counts.confirmed}`], ['testing', `Needs testing ${counts.testing}`], ['unmapped', `Not mapped ${counts.unmapped}`]];
+  if (mine.size) tabs.push(['mine', `Yours ${mine.size}`]);
+  const label = { confirmed: 'Confirmed', testing: 'Needs testing', unmapped: 'Not mapped' };
+  const revealed = new Set(), open = new Set();
+  const tipsFor = (a) => guides.filter((t) => t.achievement === a.id);
+
+  function drawList() {
+    $('#filters').innerHTML = tabs.map(([k, t]) => `<button data-f="${k}" class="${k === filter ? 'on' : ''}">${t}</button>`).join('');
+    const q = $('#q').value.toLowerCase();
+    const shown = g.achievements.filter((a) => (filter === 'all' || (filter === 'mine' ? mine.has(a.id) : status(a) === filter))
+      && (!q || (a.name + ' ' + a.description).toLowerCase().includes(q)));
+    $('#list').innerHTML = shown.map((a, i) => {
+      const s = status(a), hide = a.secret && !revealed.has(a.id) && !mine.has(a.id);
+      const n = stats.unlocks[a.id], r = rarity(a), tips = tipsFor(a);
+      const rare = r !== null && r < 10 ? `<span class="chip" style="background:rgba(139,108,255,.18);color:#c3b4ff;border:1px solid rgba(139,108,255,.5)">${r < 3 ? 'Ultra rare' : 'Rare'} · ${r}%</span>` : r !== null ? `<span class="muted" style="font-size:.85rem">${r}% of players</span>` : n ? `<span class="muted" style="font-size:.85rem">unlocked by ${n} player${n === 1 ? '' : 's'}</span>` : '';
+      return `<div class="ach${mine.has(a.id) ? ' mine' : ''}" style="animation-delay:${Math.min(i, 20) * 0.025}s;flex-wrap:wrap">
+        ${a.icon && !hide ? `<img src="${esc(a.icon)}" alt="" loading="lazy">` : `<div class="noicon">${hide ? '?' : '★'}</div>`}
+        <div class="body"><b>${hide ? 'Secret achievement' : esc(a.name)}</b>
+          ${theirs ? `<span class="vsmark"><span class="${mine.has(a.id) ? 'y' : ''}">You ${mine.has(a.id) ? '✓' : '✗'}</span><span class="${theirs.has(a.id) ? 'y' : ''}">${esc(compare.them.gamertag)} ${theirs.has(a.id) ? '✓' : '✗'}</span></span>` : ''}
+          <p>${hide ? `<span class="secret" data-reveal="${esc(a.id)}">Hidden until unlocked. Click to reveal.</span>` : esc(a.description)}</p>
+          <span class="chip ${s}">${label[s]}</span> ${rare}
+          ${mine.has(a.id) ? ' <span class="chip confirmed">✓ You have it</span>' : ''}
+          ${!hide ? ` <a href="#" data-tips="${esc(a.id)}" style="font-size:.88rem;margin-left:6px">💬 ${tips.length ? tips.length + ' tip' + (tips.length > 1 ? 's' : '') : 'Add a tip'}</a>` : ''}</div>
+        <span class="gs pts">${a.points}</span>
+        ${open.has(a.id) ? `<div class="tips" style="flex-basis:100%">${tips.map((t) => `<div class="tip">${pic({ avatar: t.avatar, color: t.color, gamertag: t.by }, true)}
+            <div style="flex:1"><b>${esc(t.by)}</b> <span class="muted" style="font-size:.85rem">${new Date(t.created * 1000).toLocaleDateString()}</span><p>${esc(t.body)}</p></div>
+            <button class="btn small${t.mine ? ' primary' : ''}" data-gvote="${t.id}">▲ ${t.votes}</button></div>`).join('')}
+          ${viewer ? `<form data-tipform="${esc(a.id)}" style="margin-top:8px"><textarea rows="2" maxlength="2000" placeholder="How did you get it? Share a tip…"></textarea><p style="margin:8px 0 0"><button class="btn small primary">Post tip</button></p></form>`
+            : `<p class="muted" style="margin:6px 0 0"><a href="login.html?next=${encodeURIComponent(location.pathname + location.search)}">Log in</a> to add a tip.</p>`}</div>` : ''}
+      </div>`;
+    }).join('') || '<p class="muted">Nothing here.</p>';
+  }
+
+  async function drawBoard() {
+    let players = [];
+    try { players = (await api(`/games/${encodeURIComponent(id)}/leaderboard`)).players; } catch {}
+    $('#board-view').innerHTML = players.length ? '<div class="grid">' + players.map((p, i) => `
+      <a class="card person" href="profile.html?u=${encodeURIComponent(p.gamertag)}"><b style="width:30px;font-size:1.3rem;color:${i < 3 ? ['#ffd34d', '#cfd8e3', '#d99a5b'][i] : 'var(--muted)'}">${i + 1}</b>${pic(p, true)}
+        <div class="grow"><b>${esc(p.gamertag)}</b><br><span class="gs">${p.points}</span> <span class="muted">· ${p.unlocked}/${p.total}</span>
+        <div class="bar" style="margin-top:6px"><i style="width:${p.total ? Math.round(100 * p.unlocked / p.total) : 0}%"></i></div></div></a>`).join('') + '</div>'
+      : '<p class="muted">No one has played this yet with an account linked. Be the first!</p>';
+  }
+  function drawViews() {
+    $('#views').innerHTML = [['achievements', 'Achievements'], ['board', 'Leaderboard']].map(([k, t]) => `<button data-v="${k}" class="${k === view ? 'on' : ''}">${t}</button>`).join('');
+    $('#ach-view').hidden = view !== 'achievements';
+    $('#board-view').hidden = view !== 'board';
+    if (view === 'board') drawBoard();
+  }
+  document.addEventListener('click', async (e) => {
+    const d = e.target.dataset;
+    if (d.f) { filter = d.f; drawList(); }
+    if (d.v) { view = d.v; drawViews(); }
+    if (d.reveal) { revealed.add(d.reveal); drawList(); }
+    if (d.tips) { e.preventDefault(); open.has(d.tips) ? open.delete(d.tips) : open.add(d.tips); drawList(); }
+    if (d.gvote) { try { await api(`/guides/${d.gvote}/vote`, { method: 'POST' }); guides = (await api(`/games/${encodeURIComponent(id)}/guides`)).guides; drawList(); } catch {} }
+  });
+  document.addEventListener('submit', async (e) => {
+    const ach = e.target.dataset.tipform;
+    if (!ach) return;
+    e.preventDefault();
+    try {
+      await api(`/games/${encodeURIComponent(id)}/guides`, { method: 'POST', body: { achievement: ach, body: e.target.querySelector('textarea').value } });
+      guides = (await api(`/games/${encodeURIComponent(id)}/guides`)).guides; drawList();
+    } catch (err) { alert(err.message); }
+  });
+  $('#q').addEventListener('input', drawList);
+  drawViews(); drawList();
+});
+</script>
+</body>
+</html>

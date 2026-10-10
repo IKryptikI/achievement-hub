@@ -1,0 +1,19 @@
+[package]
+name = "preview"
+version = "0.1.0"
+edition = "2024"
+description = "Renders the overlay panel in a test window and saves a screenshot (for checking the look)."
+
+[[bin]]
+name = "ah-preview"
+path = "src/main.rs"
+
+[dependencies.windows]
+version = "0.62"
+features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D9",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+    "Win32_UI_WindowsAndMessaging",
+]

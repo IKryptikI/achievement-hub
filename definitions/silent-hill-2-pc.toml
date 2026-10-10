@@ -1,0 +1,222 @@
+# Silent Hill 2 (PC), achievements imported from Silent Hill HD Collection
+# (Xbox 360, 2012), which split one 1000G list between SH2 and SH3; this
+# game's share is 500G. Source: Exophase "Silent Hill HD" (Xbox 360).
+# Build: sh2pc.exe as patched by Silent Hill 2: Enhanced Edition.
+# Achievements without `when` are listed but can't unlock yet (their
+# memory conditions haven't been found).
+
+[game]
+id = "silent-hill-2"
+title = "Silent Hill 2"
+developer = "Konami Computer Entertainment Tokyo"
+publisher = "Konami"
+# (Description adapted from Wikipedia, CC BY-SA 4.0. Art: the HD Collection's
+# Xbox 360 dashboard background, fetched per player into their profile.)
+description = "James Sunderland journeys to the town of Silent Hill after receiving a letter from his wife, who died three years earlier. Includes the bonus scenario Born from a Wish."
+art_url = "https://m.exophase.com/xbox/games/o/35011.png"
+year = 2002
+# Official icons: the HD Collection's Xbox 360 list, fetched per player into
+# their profile (never shipped).
+icons_from = "exophase:silent-hill-hd-xbox-360"
+
+[[build]]
+exe = "sh2pc.exe"
+timestamp = 0x3d93137b
+image_size = 0x20e0000
+
+[[achievement]]
+id = "she_would_be_proud"
+name = "She Would Be Proud"
+description = "Unlock all Achievements in SH2."
+category = "Platinum"
+points = 50
+platinum = true
+
+[[achievement]]
+id = "free_to_go"
+name = "Free to Go"
+description = "Unlock the \"Leave\" ending."
+category = "Endings"
+points = 10
+
+[[achievement]]
+id = "second_best"
+name = "Second Best"
+description = "Unlock the \"Maria\" ending."
+category = "Endings"
+points = 10
+
+[[achievement]]
+id = "goodbye"
+name = "Goodbye"
+description = "Unlock the \"In Water\" ending."
+category = "Endings"
+points = 10
+
+[[achievement]]
+id = "say_your_prayers"
+name = "Say Your Prayers"
+description = "Unlock the \"Rebirth\" ending."
+category = "Endings"
+points = 15
+
+[[achievement]]
+id = "it_all_makes_sense_now"
+name = "It All Makes Sense Now"
+description = "Unlock the \"Dog\" ending."
+category = "Endings"
+points = 15
+
+[[achievement]]
+id = "never_to_be_heard_from_again"
+name = "Never to be Heard from Again"
+description = "Unlock the \"UFO\" ending."
+category = "Endings"
+points = 15
+
+[[achievement]]
+id = "warp_speed"
+name = "Warp Speed"
+description = "Complete SH2 in 3 hours or less."
+category = "Challenges"
+points = 25
+
+[[achievement]]
+id = "overkill"
+name = "Overkill"
+description = "Acquire the Chainsaw."
+category = "Items & Weapons"
+points = 15
+
+[[achievement]]
+id = "who_needs_a_gun"
+name = "Who Needs a Gun?"
+description = "Acquire the Green Hyper Spray."
+category = "Items & Weapons"
+points = 25
+
+[[achievement]]
+id = "playing_on_the_edge"
+name = "Playing on the Edge"
+description = "Complete SH2 with 2 saves or less."
+category = "Challenges"
+points = 30
+
+[[achievement]]
+id = "keep_your_distance"
+name = "Keep Your Distance"
+description = "Defeat at least 75 enemies by shooting in SH2."
+category = "Challenges"
+points = 15
+
+[[achievement]]
+id = "melee_master"
+name = "Melee Master"
+description = "Defeat at least 75 enemies by fighting in SH2."
+category = "Challenges"
+points = 15
+
+[[achievement]]
+id = "keen_eye"
+name = "Keen Eye"
+description = "Find at least 150 items + extra items in SH2."
+category = "Challenges"
+points = 15
+
+[[achievement]]
+id = "don_t_keep_her_waiting"
+name = "Don't Keep Her Waiting"
+description = "Complete Boat Stage in less than 1 min 20 seconds."
+category = "Challenges"
+points = 15
+
+[[achievement]]
+id = "hard_to_hit"
+name = "Hard to Hit"
+description = "Receive less than 500 points of damage in one game, in SH2."
+category = "Challenges"
+points = 20
+
+[[achievement]]
+id = "childhood_trauma"
+name = "Childhood Trauma"
+description = "Defeat Abstract Daddy."
+category = "Bosses"
+points = 10
+
+[[achievement]]
+id = "i_don_t_need_you_anymore"
+name = "I Don't Need You Anymore"
+description = "Defeat Pyramid Head."
+category = "Bosses"
+points = 10
+
+[[achievement]]
+id = "where_s_that_letter"
+name = "Where's that Letter!?"
+description = "Defeat Flesh Lips."
+category = "Bosses"
+points = 10
+
+[[achievement]]
+id = "say_goodbye"
+name = "Say Goodbye"
+description = "Defeat Mary."
+category = "Bosses"
+points = 15
+
+[[achievement]]
+id = "restless_dreams"
+name = "Restless Dreams"
+description = "Unlock the \"Born from a Wish\" ending."
+category = "Endings"
+points = 15
+
+[[achievement]]
+id = "i_q_test"
+name = "I.Q. Test"
+description = "Complete SH2 on Extra Riddle difficulty."
+category = "Challenges"
+points = 30
+
+[[achievement]]
+id = "fountain_of_youth"
+name = "Fountain of Youth"
+description = "Acquire the White Chrism."
+category = "Items & Weapons"
+points = 10
+
+[[achievement]]
+id = "not_so_lost_memories"
+name = "Not So Lost Memories"
+description = "Acquire the book of Lost Memories."
+category = "Items & Weapons"
+points = 10
+
+[[achievement]]
+id = "unholy_grail"
+name = "Unholy Grail"
+description = "Acquire the Obsidian Goblet."
+category = "Items & Weapons"
+points = 20
+
+[[achievement]]
+id = "light_reading"
+name = "Light Reading"
+description = "Acquire the book of Crimson Ceremony."
+category = "Items & Weapons"
+points = 10
+
+[[achievement]]
+id = "man_s_best_friend"
+name = "Man's Best Friend"
+description = "Acquire the Dog Key."
+category = "Items & Weapons"
+points = 40
+
+[[achievement]]
+id = "we_re_not_alone"
+name = "We're Not Alone"
+description = "Acquire the Blue Gem."
+category = "Items & Weapons"
+points = 20

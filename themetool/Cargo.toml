@@ -1,0 +1,12 @@
+[package]
+name = "themetool"
+version = "0.1.0"
+edition = "2024"
+description = "Builds an Achievement Hub theme pack from files you already have (e.g. your copy of the MC360 XBMC skin)."
+
+[[bin]]
+name = "ah-theme"
+path = "src/main.rs"
+
+[dependencies]
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }

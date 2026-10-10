@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<title>Become a mapper · Achievement Hub</title>
+<meta name="description" content="Help map achievements for classic PC games. Apply to join the Achievement Hub mapping team.">
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Become a mapper · Achievement Hub">
+<meta property="og:description" content="Help map achievements for classic PC games. Apply to join the Achievement Hub mapping team.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap reveal" style="max-width:780px">
+  <h1>Become a mapper</h1>
+  <p class="lead muted" style="font-size:1.15rem">Mappers are the reason achievements unlock. They play a game with record mode on and find the exact moment each achievement happens, so it unlocks automatically for everyone after them.</p>
+  <div class="grid" style="margin:26px 0">
+    <div class="card"><h3>🎮 You play</h3><p class="muted" style="margin:0">Turn on "Help map achievements" in the app. When you earn something, press A in the overlay.</p></div>
+    <div class="card"><h3>🔎 It learns</h3><p class="muted" style="margin:0">Record mode works out what changed in the game. A second run confirms it.</p></div>
+    <div class="card"><h3>🏆 Everyone earns</h3><p class="muted" style="margin:0">Your mapping goes into the database with your name on it, plus a Mapper badge.</p></div>
+  </div>
+  <p class="muted">It's completely optional: nobody's game is watched unless they turn record mode on themselves. Fill this in and we'll get in touch.</p>
+  <form id="f" class="card">
+    <div class="row">
+      <div style="flex:1;min-width:220px"><label for="name">Name or nickname *</label><input id="name" required maxlength="80"></div>
+      <div style="flex:1;min-width:220px"><label for="email">Email *</label><input id="email" type="email" required maxlength="120"></div>
+    </div>
+    <div class="row">
+      <div style="flex:1;min-width:220px"><label for="discord">Discord (optional)</label><input id="discord" maxlength="60" placeholder="name"></div>
+      <div style="flex:1;min-width:220px"><label for="platform">You play on</label><select id="platform"><option>Linux</option><option>Windows</option><option>Steam Deck</option><option>Both Linux and Windows</option></select></div>
+    </div>
+    <label for="games">Which games would you like to map?</label><textarea id="games" rows="2" maxlength="600" placeholder="e.g. Silent Hill 3, Fallout 3, anything on the request list…"></textarea>
+    <label for="experience">Any experience? (Cheat Engine, modding, speedrunning, programming… none is fine too)</label><textarea id="experience" rows="3" maxlength="1000"></textarea>
+    <div class="row">
+      <div style="flex:1;min-width:220px"><label for="hours">Roughly how much time could you give?</label><select id="hours"><option>A few hours a month</option><option>A few hours a week</option><option>Lots, I love this stuff</option></select></div>
+    </div>
+    <label for="notes">Anything else?</label><textarea id="notes" rows="2" maxlength="1000"></textarea>
+    <input id="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+    <label style="display:flex;gap:10px;align-items:flex-start;color:var(--text)"><input type="checkbox" id="consent" style="margin-top:5px"> I agree to be contacted about mapping at the email (and Discord) above. You can ask us to delete your details at any time.</label>
+    <div id="msg"></div>
+    <p style="margin-top:16px"><button class="btn primary">Send application <span class="arrow">→</span></button></p>
+  </form>
+</div></section></main>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const m = await me();
+  if (m && m.email) $('#email').value = m.email;
+  if (m) $('#name').value = m.gamertag;
+  $('#f').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const v = (id) => $('#' + id).value;
+    try {
+      await api('/mappers', { method: 'POST', body: { name: v('name'), email: v('email'), discord: v('discord'), platform: v('platform'), games: v('games'), experience: v('experience'), hours: v('hours'), notes: v('notes'), website: v('website'), consent: $('#consent').checked } });
+      $('#f').innerHTML = '<h2>Thanks! 🎉</h2><p>Your application is in. We\'ll reach out by email soon. In the meantime you can turn on <b>Help map achievements</b> in the app and try record mode.</p>';
+    } catch (err) { note($('#msg'), err.message); }
+  });
+});
+</script>
+</body></html>

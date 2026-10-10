@@ -1,0 +1,11 @@
+{
+  "name": "achievementhub-website",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler pages dev",
+    "db:local": "wrangler d1 migrations apply achievementhub --local"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}

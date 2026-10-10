@@ -1,0 +1,644 @@
+# Fallout 3: achievements imported from Exophase (fallout-3-xbox-360), 72 total, 1550 points.
+# Achievements without `when` are listed but can't unlock yet (their
+# memory conditions haven't been found).
+
+[game]
+id = "fallout-3-goty"
+title = "Fallout 3"
+subtitle = "Game of the Year Edition"
+icons_from = "exophase:fallout-3-xbox-360"
+
+[engine]
+kind = "gamebryo-fallout3"
+quest_vtable = 0xb77c80   # TESQuest vtable, relative to the exe
+player_rva = 0xe24884     # pointer to the player, relative to the exe
+misc_stats_rva = 0xe23230 # Pip-Boy general stats (pointers), relative to the exe
+
+[[build]]
+exe = "Fallout3.exe"
+timestamp = 0x60a80e56
+image_size = 0x111f000
+
+[[achievement]]
+id = "vault_101_citizenship_award"
+name = "Vault 101 Citizenship Award"
+description = "Got the Pip-Boy 3000"
+points = 10
+[[achievement.when]]
+quest_done = "CG02"   # Growing Up Fast: the 10th birthday
+
+[[achievement]]
+id = "the_g_o_a_t_whisperer"
+name = "The G.O.A.T. Whisperer"
+description = "Took the G.O.A.T."
+points = 10
+[[achievement.when]]
+quest_done = "CG03"   # Future Imperfect
+
+[[achievement]]
+id = "escape"
+name = "Escape!"
+description = "Completed \"Escape!\""
+points = 20
+[[achievement.when]]
+quest_done = "CG04"
+
+[[achievement]]
+id = "following_in_his_footsteps"
+name = "Following in His Footsteps"
+description = "Completed \"Following in His Footsteps\""
+points = 20
+[[achievement.when]]
+quest_done = "MQ01"
+
+[[achievement]]
+id = "galaxy_news_radio"
+name = "Galaxy News Radio"
+description = "Completed \"Galaxy News Radio\""
+points = 20
+[[achievement.when]]
+quest_done = "MQ02"
+
+[[achievement]]
+id = "scientific_pursuits"
+name = "Scientific Pursuits"
+description = "Completed \"Scientific Pursuits\""
+points = 20
+[[achievement.when]]
+quest_done = "MQ03"
+
+[[achievement]]
+id = "tranquility_lane"
+name = "Tranquility Lane"
+description = "Completed \"Tranquility Lane\""
+points = 20
+[[achievement.when]]
+quest_done = "MQ04"
+
+[[achievement]]
+id = "the_waters_of_life"
+name = "The Waters of Life"
+description = "Completed \"The Waters of Life\""
+points = 20
+[[achievement.when]]
+quest_done = "MQ05"
+
+[[achievement]]
+id = "picking_up_the_trail"
+name = "Picking up the Trail"
+description = "Completed \"Picking up the Trail\""
+points = 20
+[[achievement.when]]
+quest_done = "MQ06"
+
+[[achievement]]
+id = "rescue_from_paradise"
+name = "Rescue from Paradise"
+description = "Completed \"Rescue from Paradise\""
+points = 20
+[[achievement.when]]
+quest_done = "MQ07"
+
+[[achievement]]
+id = "finding_the_garden_of_eden"
+name = "Finding the Garden of Eden"
+description = "Completed \"Finding the Garden of Eden\""
+points = 20
+[[achievement.when]]
+quest_done = "MQ08"
+
+[[achievement]]
+id = "the_american_dream"
+name = "The American Dream"
+description = "Completed \"The American Dream\""
+points = 20
+[[achievement.when]]
+quest_done = "MQ09"
+
+[[achievement]]
+id = "take_it_back"
+name = "Take it Back!"
+description = "Completed \"Take it Back!\""
+points = 40
+[[achievement.when]]
+quest_done = "MQ11"
+
+[[achievement]]
+id = "big_trouble_in_big_town"
+name = "Big Trouble in Big Town"
+description = "Completed \"Big Trouble in Big Town\""
+points = 20
+[[achievement.when]]
+quest_done = "MS01"
+
+[[achievement]]
+id = "the_superhuman_gambit"
+name = "The Superhuman Gambit"
+description = "Completed \"The Superhuman Gambit\""
+points = 20
+[[achievement.when]]
+quest_done = "MS02"
+
+[[achievement]]
+id = "the_wasteland_survival_guide"
+name = "The Wasteland Survival Guide"
+description = "Completed \"The Wasteland Survival Guide\""
+points = 20
+[[achievement.when]]
+quest_done = "MS03"
+
+[[achievement]]
+id = "those"
+name = "Those!"
+description = "Completed \"Those!\""
+points = 20
+[[achievement.when]]
+quest_done = "MS04"
+
+[[achievement]]
+id = "the_nuka_cola_challenge"
+name = "The Nuka-Cola Challenge"
+description = "Completed \"The Nuka-Cola Challenge\""
+points = 20
+[[achievement.when]]
+quest_done = "MS05"
+
+[[achievement]]
+id = "head_of_state"
+name = "Head of State"
+description = "Completed \"Head of State\""
+points = 20
+[[achievement.when]]
+quest_done = "MS06"
+
+[[achievement]]
+id = "the_replicated_man"
+name = "The Replicated Man"
+description = "Completed \"The Replicated Man\""
+points = 20
+[[achievement.when]]
+quest_done = "MS08"
+
+[[achievement]]
+id = "blood_ties"
+name = "Blood Ties"
+description = "Completed \"Blood Ties\""
+points = 20
+[[achievement.when]]
+quest_done = "MS09"
+
+[[achievement]]
+id = "oasis"
+name = "Oasis"
+description = "Completed \"Oasis\""
+points = 20
+[[achievement.when]]
+quest_done = "MS10"
+
+[[achievement]]
+id = "the_power_of_the_atom"
+name = "The Power of the Atom"
+description = "Completed \"The Power of the Atom\""
+points = 20
+[[achievement.when]]
+quest_done = "MS11"
+
+[[achievement]]
+id = "tenpenny_tower"
+name = "Tenpenny Tower"
+description = "Completed \"Tenpenny Tower\""
+points = 20
+[[achievement.when]]
+quest_done = "MS12"
+
+[[achievement]]
+id = "strictly_business"
+name = "Strictly Business"
+description = "Completed \"Strictly Business\""
+points = 20
+[[achievement.when]]
+quest_done = "MS13"
+
+[[achievement]]
+id = "you_gotta_shoot_em_in_the_head"
+name = "You Gotta Shoot 'Em in the Head"
+description = "Completed \"You Gotta Shoot 'Em in the Head\""
+points = 20
+[[achievement.when]]
+quest_done = "MS14"
+
+[[achievement]]
+id = "stealing_independence"
+name = "Stealing Independence"
+description = "Completed \"Stealing Independence\""
+points = 20
+[[achievement.when]]
+quest_done = "MS15"
+
+[[achievement]]
+id = "trouble_on_the_homefront"
+name = "Trouble on the Homefront"
+description = "Completed \"Trouble on the Homefront\""
+points = 20
+[[achievement.when]]
+quest_done = "MS16"
+
+[[achievement]]
+id = "agatha_s_song"
+name = "Agatha's Song"
+description = "Completed \"Agatha's Song\""
+points = 20
+[[achievement.when]]
+quest_done = "MS17"
+
+[[achievement]]
+id = "reilly_s_rangers"
+name = "Reilly's Rangers"
+description = "Completed \"Reilly's Rangers\""
+points = 20
+[[achievement.when]]
+quest_done = "MS18"
+
+[[achievement]]
+id = "reaver"
+name = "Reaver"
+description = "Reached Level 8 with Bad Karma"
+points = 10
+[[achievement.when]]
+player = "level"
+ge = 8
+[[achievement.when]]
+player = "karma"
+le = -250
+
+[[achievement]]
+id = "mercenary"
+name = "Mercenary"
+description = "Reached Level 8 with Neutral Karma"
+points = 10
+[[achievement.when]]
+player = "level"
+ge = 8
+[[achievement.when]]
+player = "karma"
+between = [-249, 249]
+
+[[achievement]]
+id = "protector"
+name = "Protector"
+description = "Reached Level 8 with Good Karma"
+points = 10
+[[achievement.when]]
+player = "level"
+ge = 8
+[[achievement.when]]
+player = "karma"
+ge = 250
+
+[[achievement]]
+id = "harbinger_of_war"
+name = "Harbinger of War"
+description = "Reached Level 14 with Bad Karma"
+points = 20
+[[achievement.when]]
+player = "level"
+ge = 14
+[[achievement.when]]
+player = "karma"
+le = -250
+
+[[achievement]]
+id = "pinnacle_of_survival"
+name = "Pinnacle of Survival"
+description = "Reached Level 14 with Neutral Karma"
+points = 20
+[[achievement.when]]
+player = "level"
+ge = 14
+[[achievement.when]]
+player = "karma"
+between = [-249, 249]
+
+[[achievement]]
+id = "ambassador_of_peace"
+name = "Ambassador of Peace"
+description = "Reached Level 14 with Good Karma"
+points = 20
+[[achievement.when]]
+player = "level"
+ge = 14
+[[achievement.when]]
+player = "karma"
+ge = 250
+
+[[achievement]]
+id = "scourge_of_humanity"
+name = "Scourge of Humanity"
+description = "Reached Level 20 with Bad Karma"
+points = 30
+[[achievement.when]]
+player = "level"
+ge = 20
+[[achievement.when]]
+player = "karma"
+le = -250
+
+[[achievement]]
+id = "paradigm_of_humanity"
+name = "Paradigm of Humanity"
+description = "Reached Level 20 with Neutral Karma"
+points = 30
+[[achievement.when]]
+player = "level"
+ge = 20
+[[achievement.when]]
+player = "karma"
+between = [-249, 249]
+
+[[achievement]]
+id = "last_best_hope_of_humanity"
+name = "Last, Best Hope of Humanity"
+description = "Reached Level 20 with Good Karma"
+points = 30
+[[achievement.when]]
+player = "level"
+ge = 20
+[[achievement.when]]
+player = "karma"
+ge = 250
+
+[[achievement]]
+id = "weaponsmith"
+name = "Weaponsmith"
+description = "Made one of every custom weapon"
+points = 30
+
+[[achievement]]
+id = "doesn_t_play_well_with_others"
+name = "Doesn't Play Well with Others"
+description = "Killed 300 people"
+points = 20
+[[achievement.when]]
+stat = "people_killed"
+ge = 300
+
+[[achievement]]
+id = "slayer_of_beasts"
+name = "Slayer of Beasts"
+description = "Killed 300 creatures"
+points = 20
+[[achievement.when]]
+stat = "creatures_killed"
+ge = 300
+
+[[achievement]]
+id = "silver_tongued_devil"
+name = "Silver-Tongued Devil"
+description = "Won 50 Speech Challenges"
+points = 20
+[[achievement.when]]
+stat = "speech_successes"
+ge = 50
+
+[[achievement]]
+id = "data_miner"
+name = "Data Miner"
+description = "Hacked 50 terminals"
+points = 20
+[[achievement.when]]
+stat = "computers_hacked"
+ge = 50
+
+[[achievement]]
+id = "keys_are_for_cowards"
+name = "Keys are for Cowards"
+description = "Picked 50 locks"
+points = 20
+[[achievement.when]]
+stat = "locks_picked"
+ge = 50
+
+[[achievement]]
+id = "one_man_scouting_party"
+name = "One-Man Scouting Party"
+description = "Discovered 100 locations"
+points = 20
+[[achievement.when]]
+stat = "locations_discovered"
+ge = 100
+
+[[achievement]]
+id = "psychotic_prankster"
+name = "Psychotic Prankster"
+description = "Placed a grenade or mine while pickpocketing"
+points = 10
+[[achievement.when]]
+stat = "pants_exploded"
+ge = 1
+
+[[achievement]]
+id = "the_bigger_they_are"
+name = "The Bigger They Are…"
+description = "Kill all the Super Mutant Behemoths"
+points = 20
+
+[[achievement]]
+id = "yes_i_play_with_dolls"
+name = "Yes, I Play with Dolls"
+description = "Collected 10 Vault-Tec Bobbleheads"
+points = 10
+[[achievement.when]]
+stat = "bobbleheads_found"
+ge = 10
+
+[[achievement]]
+id = "vault_tec_c_e_o"
+name = "Vault-Tec C.E.O."
+description = "Collected 20 Vault-Tec Bobbleheads"
+points = 30
+[[achievement.when]]
+stat = "bobbleheads_found"
+ge = 20
+
+[[achievement]]
+id = "not_of_this_world"
+name = "Not of This World"
+description = "Completed \"Not of This World\""
+points = 20
+[[achievement.when]]
+quest_done = "DLC05MZ1"
+
+[[achievement]]
+id = "among_the_stars"
+name = "Among the Stars"
+description = "Completed \"Among the Stars\""
+points = 20
+[[achievement.when]]
+quest_done = "DLC05MZ2"
+
+[[achievement]]
+id = "this_galaxy_ain_t_big_enough"
+name = "This Galaxy Ain't Big Enough…"
+description = "Completed \"This Galaxy Ain't Big Enough…\""
+points = 40
+[[achievement.when]]
+quest_done = "DLC05MZ3"
+
+[[achievement]]
+id = "alien_archivist"
+name = "Alien Archivist"
+description = "Collected all Alien Captive Recordings"
+points = 20
+
+[[achievement]]
+id = "the_local_flavor"
+name = "The Local Flavor"
+description = "Completed \"The Local Flavor\""
+points = 20
+[[achievement.when]]
+quest_done = "DLC04MQ01"
+
+[[achievement]]
+id = "walking_with_spirits"
+name = "Walking With Spirits"
+description = "Completed \"Walking With Spirits\""
+points = 20
+[[achievement.when]]
+quest_done = "DLC04MQ02"
+
+[[achievement]]
+id = "a_meeting_of_the_minds"
+name = "A Meeting of the Minds"
+description = "Completed \"A Meeting of the Minds\""
+points = 20
+[[achievement.when]]
+quest_done = "DLC04MQ05a|DLC04MQ05b"
+
+[[achievement]]
+id = "bog_walker"
+name = "Bog Walker"
+description = "Discovered all locations within Point Lookout"
+points = 40
+
+[[achievement]]
+id = "death_from_above"
+name = "Death From Above"
+description = "Completed \"Death From Above\""
+points = 30
+[[achievement.when]]
+quest_done = "DLC03BS1"
+
+[[achievement]]
+id = "shock_value"
+name = "Shock Value"
+description = "Completed \"Shock Value\""
+points = 30
+[[achievement.when]]
+quest_done = "DLC03BS2"
+
+[[achievement]]
+id = "who_dares_wins"
+name = "Who Dares Wins"
+description = "Completed \"Who Dares Wins\""
+points = 30
+[[achievement.when]]
+quest_done = "DLC03BS3"
+
+[[achievement]]
+id = "devil"
+name = "Devil"
+description = "Reached Level 30 with Bad Karma"
+points = 20
+[[achievement.when]]
+player = "level"
+ge = 30
+[[achievement.when]]
+player = "karma"
+le = -250
+
+[[achievement]]
+id = "true_mortal"
+name = "True Mortal"
+description = "Reached Level 30 with Neutral Karma"
+points = 20
+[[achievement.when]]
+player = "level"
+ge = 30
+[[achievement.when]]
+player = "karma"
+between = [-249, 249]
+
+[[achievement]]
+id = "messiah"
+name = "Messiah"
+description = "Reached Level 30 with Good Karma"
+points = 20
+[[achievement.when]]
+player = "level"
+ge = 30
+[[achievement.when]]
+player = "karma"
+ge = 250
+
+[[achievement]]
+id = "into_the_pitt"
+name = "Into The Pitt"
+description = "Completed \"Into The Pitt\""
+points = 20
+[[achievement.when]]
+quest_done = "DLC01Quest01"
+
+[[achievement]]
+id = "unsafe_working_conditions"
+name = "Unsafe Working Conditions"
+description = "Completed \"Unsafe Working Conditions\""
+points = 20
+[[achievement.when]]
+quest_done = "DLC01Quest02"
+
+[[achievement]]
+id = "free_labor"
+name = "Free Labor"
+description = "Completed \"Free Labor\""
+points = 40
+[[achievement.when]]
+quest_done = "DLC01Quest03"
+
+[[achievement]]
+id = "mill_worker"
+name = "Mill Worker"
+description = "Found All 100 Steel Ingots"
+points = 20
+
+[[achievement]]
+id = "aiding_the_outcasts"
+name = "Aiding the Outcasts"
+description = "Completed \"Aiding the Outcasts\""
+points = 20
+[[achievement.when]]
+quest_done = "DLC02OA1"
+
+[[achievement]]
+id = "the_guns_of_anchorage"
+name = "The Guns of Anchorage"
+description = "Completed \"The Guns of Anchorage\""
+points = 20
+[[achievement.when]]
+quest_done = "DLC02OA2"
+
+[[achievement]]
+id = "paving_the_way"
+name = "Paving the Way"
+description = "Completed \"Paving the Way\""
+points = 20
+[[achievement.when]]
+quest_done = "DLC02OA3"
+
+[[achievement]]
+id = "operation_anchorage"
+name = "Operation: Anchorage"
+description = "Completed \"Operation: Anchorage\""
+points = 40
+[[achievement.when]]
+quest_done = "DLC02OA4"
+

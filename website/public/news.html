@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<title>News & changelog · Achievement Hub</title>
+<meta name="description" content="What's new in Achievement Hub: new games, app updates and more.">
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="News & changelog · Achievement Hub">
+<meta property="og:description" content="What's new in Achievement Hub: new games, app updates and more.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap reveal" style="max-width:860px">
+  <h1>What's new</h1>
+  <h2 style="margin-top:30px">Recently added games</h2>
+  <div class="covers" id="recent" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))"><div class="skel" style="aspect-ratio:2/3"></div><div class="skel" style="aspect-ratio:2/3"></div><div class="skel" style="aspect-ratio:2/3"></div></div>
+  <h2 style="margin-top:40px">News &amp; changelog</h2>
+  <div id="news"></div>
+</div></section></main>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  try { const list = await games(); $('#recent').innerHTML = [...list].sort((a, b) => (b.added || 0) - (a.added || 0)).slice(0, 8).map((g) => coverCard(g)).join(''); } catch {}
+  let news = [];
+  try { news = (await api('/news')).news; } catch {}
+  $('#news').innerHTML = news.length ? news.map((n) => `<article class="card" style="margin-bottom:14px"><h3>${esc(n.title)}</h3>
+      <p class="muted" style="font-size:.9rem">${new Date(n.created * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      <div style="white-space:pre-wrap">${esc(n.body)}</div></article>`).join('')
+    : '<p class="muted">No posts yet.</p>';
+});
+</script>
+</body></html>

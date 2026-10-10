@@ -1,0 +1,28 @@
+# Website details per game id that aren't part of the game files: the
+# cover (official box art or store cover) and optional banner image.
+[fallout-3-goty]
+cover = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/library_600x900_2x.jpg"
+banner = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/library_hero.jpg"
+
+[oblivion]
+cover = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/library_600x900_2x.jpg"
+banner = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/library_hero.jpg"
+
+[re2-classic-gog]
+cover = "https://images.gog-statics.com/7cb6d5e76cf9829af4e0efecb73c38b730476ac7fc7bb519eafadebd2ded49c4.jpg"
+banner = "https://images.gog-statics.com/540d019872600861a13326657b31bccda5ee5e4a539743e364937909f6eb7d7a.jpg"
+
+[transformers-the-game]
+cover = "https://images.launchbox-app.com/cee5b3ad-3587-46f7-a76c-7ccc3d956aeb.jpg"
+
+[silent-hill-2]
+cover = "https://images.launchbox-app.com/be3ecea7-0f94-4d8d-b6b1-63122d8a370c.jpg"
+
+[silent-hill-3]
+cover = "https://images.launchbox-app.com/b304e8ba-ce0b-4bf2-b7bb-8aad12db1614.jpg"
+
+[saw]
+cover = "https://images.launchbox-app.com/efe7aeb7-3dfe-494b-b3a1-0406e987d825.png"
+
+[spider-man-shattered-dimensions]
+cover = "https://images.launchbox-app.com/93fb596b-09ee-42e8-b798-29819b74dbad.jpg"
