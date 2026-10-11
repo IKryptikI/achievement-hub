@@ -20,17 +20,17 @@
 <main>
 <section><div class="wrap reveal">
   <h1>Download</h1>
-  <p class="muted">The desktop app finds your games and installs the overlay into them. Both are in one download.</p>
-  <div class="grid">
-    <div class="card"><h3>Linux</h3><p class="muted">AppImage, works on most distributions. Games running through Proton, Wine, Heroic, Bottles or Lutris are supported.</p><a class="btn primary" id="dl-linux" href="#">Download for Linux</a></div>
-    <div class="card"><h3>Windows</h3><p class="muted">Windows 10 or 11, 64-bit.</p><a class="btn primary" id="dl-windows" href="#">Download for Windows</a></div>
+  <p class="muted">One app. It finds your games and adds the overlay.</p>
+  <div class="row" style="margin-top:22px">
+    <a class="btn primary big" id="dl-linux" href="#">Download for Linux</a>
+    <a class="btn primary big" id="dl-windows" href="#">Download for Windows</a>
   </div>
   <p class="muted" style="margin-top:14px">All releases and checksums are on <a id="dl-all" href="#" target="_blank" rel="noopener">GitHub</a>. Or build it yourself from the <a id="src" href="#" target="_blank" rel="noopener">source code</a>.</p>
 </div></section>
 
 <section><div class="wrap reveal">
   <h2>Installing</h2>
-  <div class="grid">
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">
     <div class="card"><h3>Linux</h3>
       <ol class="install">
         <li>Download the <code>.AppImage</code> file.</li>
@@ -39,9 +39,10 @@
       </ol></div>
     <div class="card"><h3>Windows</h3>
       <ol class="install">
-        <li>Download and run the installer.</li>
+        <li>Download the <code>.zip</code> and unzip it anywhere, e.g. Documents. No installer needed.</li>
+        <li>Run <code>AchievementHub.exe</code>. Keep the <code>payload</code> folder next to it.</li>
         <li>If SmartScreen warns you (new apps without a paid certificate do), click "More info" → "Run anyway".</li>
-        <li>Open Achievement Hub from the Start menu.</li>
+        <li>It scans Steam, GOG Galaxy, Heroic and your game folders.</li>
       </ol></div>
   </div>
 </div></section>
@@ -63,7 +64,9 @@
 </main>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  for (const id of ['dl-linux', 'dl-windows', 'dl-all']) $('#' + id).href = SITE.releases;
+  $('#dl-all').href = SITE.releases;
+  $('#dl-linux').href = SITE.releases + '/download/AchievementHub-x86_64.AppImage';
+  $('#dl-windows').href = SITE.releases + '/download/AchievementHub-windows.zip';
   $('#src').href = SITE.github;
 });
 </script>

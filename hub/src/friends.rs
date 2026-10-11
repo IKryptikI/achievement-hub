@@ -2,6 +2,7 @@
 //! code, publishing their profile, and fetching friends (common/social.rs).
 
 #[path = "../../common/social.rs"]
+#[allow(dead_code)]
 pub mod social;
 
 use crate::library::profile_dir;

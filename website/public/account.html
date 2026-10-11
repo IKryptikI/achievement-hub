@@ -25,9 +25,20 @@
   <form id="prof" class="card">
     <div class="row">
       <div style="flex:1;min-width:200px"><label for="gt">Gamertag</label><input id="gt" maxlength="16"></div>
-      <div><label for="av">Gamer picture (a letter or emoji)</label><input id="av" maxlength="4" style="width:120px"></div>
       <div><label for="co">Color</label><input id="co" type="color"></div>
     </div>
+    <label>Gamer picture</label>
+    <input type="hidden" id="av">
+    <div class="row" style="align-items:center;gap:16px">
+      <div id="pv-pic"></div>
+      <div>
+        <label class="btn small" style="margin:0;cursor:pointer">Upload a picture<input type="file" id="picfile" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
+        <button type="button" class="btn small" id="picdel">Remove</button>
+        <p class="muted" style="margin:8px 0 0;font-size:.85rem">Any picture works; it's cropped to a square. Keep it friendly: pictures that break the <a href="terms.html">rules</a> get removed.</p>
+      </div>
+    </div>
+    <div id="picmsg"></div>
+    <div class="row" style="margin-top:10px;align-items:center"><span class="muted">No picture? Show a letter or emoji on your color:</span><input id="avl" maxlength="4" style="width:90px"></div>
     <label for="mo">Motto</label><input id="mo" maxlength="60" placeholder="Shown under your gamertag">
     <label for="bio">Bio</label><textarea id="bio" rows="3" maxlength="400"></textarea>
     <label for="fav">Favorite game</label><select id="fav"><option value="">(none)</option></select>
@@ -84,6 +95,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   card();
   $('#gt').value = m.gamertag; $('#av').value = m.avatar; $('#co').value = m.color; $('#mo').value = m.motto;
   $('#bio').value = m.bio; $('#pv').checked = m.private;
+  // Gamer picture: upload your own, or a letter/emoji.
+  const drawPic = () => { $('#pv-pic').innerHTML = pic({ ...m, color: $('#co').value }); $('#picdel').hidden = !m.avatar.startsWith('img:'); };
+  if (!m.avatar.startsWith('img:')) $('#avl').value = m.avatar;
+  drawPic();
+  $('#picfile').addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    try {
+      const jpg = await squarePicture(f);
+      const r = await fetch('/api/me/picture', { method: 'PUT', body: jpg, credentials: 'same-origin' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      m.avatar = d.avatar; $('#av').value = m.avatar; $('#avl').value = '';
+      drawPic(); card(); note($('#picmsg'), 'Picture saved.', true); refreshCard(m).catch(() => {});
+    } catch (err) { note($('#picmsg'), err.message); }
+    e.target.value = '';
+  });
+  $('#picdel').addEventListener('click', async () => {
+    try { await api('/me/picture', { method: 'DELETE' }); m.avatar = m.gamertag[0].toUpperCase(); $('#av').value = m.avatar; $('#avl').value = m.avatar; drawPic(); card(); note($('#picmsg'), 'Picture removed.', true); }
+    catch (err) { note($('#picmsg'), err.message); }
+  });
+  $('#avl').addEventListener('input', () => { if ($('#avl').value) $('#av').value = $('#avl').value; });
   try {
     for (const g of (await games()).sort((a, b) => a.title.localeCompare(b.title)))
       $('#fav').insertAdjacentHTML('beforeend', `<option value="${esc(g.id)}">${esc(g.title)}</option>`);
@@ -114,8 +147,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   $('#prof').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const b = { gamertag: $('#gt').value, avatar: $('#av').value, color: $('#co').value, motto: $('#mo').value, bio: $('#bio').value, favorite: $('#fav').value, private: $('#pv').checked, banner: $('#ban').value, showcase };
-    try { await api('/me', { method: 'PATCH', body: b }); Object.assign(m, b); card(); note($('#pmsg'), 'Saved.', true); }
+    const b = { gamertag: $('#gt').value, avatar: $('#avl').value || undefined, color: $('#co').value, motto: $('#mo').value, bio: $('#bio').value, favorite: $('#fav').value, private: $('#pv').checked, banner: $('#ban').value, showcase };
+    if (b.avatar === undefined) delete b.avatar;
+    try { await api('/me', { method: 'PATCH', body: b }); Object.assign(m, b); card(); note($('#pmsg'), 'Saved.', true); refreshCard(m).catch(() => {}); }
     catch (err) { note($('#pmsg'), err.message); }
   });
   $('#mk').addEventListener('click', async () => {

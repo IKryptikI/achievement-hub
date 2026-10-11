@@ -22,15 +22,24 @@
 <div class="hero"><div class="wrap hero-grid">
   <div>
     <h1>Achievements for the PC games <span class="shine">that never had them.</span></h1>
-    <p class="lead">Resident Evil. Silent Hill. Fallout 3. Oblivion. Achievement Hub brings their console achievements to the PC versions you already own, with pop-ups, a Gamerscore and a dashboard right inside the game.</p>
+    <p class="lead">Pop-ups, Gamerscore and your friends, right inside the games you already own.</p>
     <div class="row"><a class="btn primary big" href="download.html">Download free</a><a class="btn big" href="games.html">Browse games</a></div>
-    <p class="muted" style="margin-top:14px;font-size:.95rem">Linux &amp; Windows · Open source · No anti-cheat games, ever</p>
   </div>
   <div class="stage" id="stage">
     <img class="fan" alt=""><img class="fan" alt=""><img class="fan" alt="">
     <div class="toast" id="toast"><div class="ring"><img alt=""></div><div><small>Achievement unlocked</small><b></b></div></div>
   </div>
 </div></div>
+
+<div id="live" hidden><div class="wrap" style="margin:6px auto 10px"><span class="live-dot"></span><b>Unlocking right now</b></div><div class="ticker"><div class="run" id="live-run"></div></div></div>
+
+<section><div class="wrap">
+  <h2 class="reveal">Right inside your game</h2>
+  <div class="showcase reveal" id="showcase">
+    <div class="screen"><img src="assets/shots/shot-1.webp" alt="Your dashboard (Blades design)" data-design="Blades" data-cap="Your dashboard" class=on loading="eager"><img src="assets/shots/shot-2.webp" alt="Every achievement, with the moment you earned it (Blades design)" data-design="Blades" data-cap="Every achievement, with the moment you earned it" loading="lazy"><img src="assets/shots/shot-3.webp" alt="Your whole library (Blades design)" data-design="Blades" data-cap="Your whole library" loading="lazy"><img src="assets/shots/shot-4.webp" alt="Metro design (Metro design)" data-design="Metro" data-cap="Metro design" loading="lazy"><img src="assets/shots/shot-5.webp" alt="Now playing (Metro design)" data-design="Metro" data-cap="Now playing" loading="lazy"><img src="assets/shots/shot-6.webp" alt="Classic design (Classic design)" data-design="Classic" data-cap="Classic design" loading="lazy"><img src="assets/shots/shot-7.webp" alt="Now playing (Classic design)" data-design="Classic" data-cap="Now playing" loading="lazy"><img src="assets/shots/shot-8.webp" alt="Your games (Classic design)" data-design="Classic" data-cap="Your games" loading="lazy"></div>
+    <div class="showcase-bar"><span class="design" id="sc-design">Blades</span><span id="sc-cap" class="muted">Your dashboard</span><span class="dots" id="sc-dots"></span></div>
+  </div>
+</div></section>
 
 <section><div class="wrap">
   <div class="stats reveal">
@@ -43,11 +52,11 @@
 
 <section><div class="wrap">
   <h2 class="reveal">Why this exists</h2>
-  <p class="reveal" style="max-width:760px">Plenty of great PC games came out before achievements existed, or lost them when services like Games for Windows Live shut down. Their console versions often had full lists. Achievement Hub brings those back to the PC, tracks them while you play, and lets you show them off to your friends.</p>
+  <p class="reveal" style="max-width:640px">Great games deserve to be beaten properly. We give the classics the achievements they were missing.</p>
   <div class="steps" style="margin-top:28px">
-    <div class="card lift reveal"><h3>Install the app</h3><p class="muted">It finds your games wherever they live: Steam, GOG, Heroic, Bottles, a folder on a USB drive.</p></div>
-    <div class="card lift reveal"><h3>Add a game</h3><p class="muted">One click puts the overlay in the game. No launch options, no mod manager. Launch it however you usually do.</p></div>
-    <div class="card lift reveal"><h3>Play and pop</h3><p class="muted">Achievements pop in-game. Press Shift+F2 or the Xbox button for your list, your friends and your games.</p></div>
+    <div class="card lift reveal"><h3>Install the app</h3><p class="muted">It finds your games for you.</p></div>
+    <div class="card lift reveal"><h3>Add a game</h3><p class="muted">One click. No mod managers.</p></div>
+    <div class="card lift reveal"><h3>Play and pop</h3><p class="muted">Unlocks pop in-game, just like they should.</p></div>
   </div>
 </div></section>
 
@@ -64,7 +73,7 @@
 <section><div class="wrap">
   <div class="card reveal" style="text-align:center;padding:44px 20px;background:linear-gradient(135deg,rgba(76,201,49,.18),rgba(139,108,255,.12))">
     <h2>Your backlog is waiting.</h2>
-    <p class="muted">Make an account, link the app, and every achievement you earn shows up on your profile.</p>
+    <p class="muted">Every unlock, on your profile.</p>
     <div class="row" style="justify-content:center"><a class="btn primary big" href="signup.html">Create an account</a><a class="btn big" href="download.html">Get the app</a></div>
   </div>
 </div></section>
@@ -108,6 +117,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     toast.classList.remove('show'); void toast.offsetWidth; toast.classList.add('show');
   };
   pop(); setInterval(pop, 4600);
+});
+
+// Overlay screenshots, cycling.
+(function showcase() {
+  const imgs = [...document.querySelectorAll('#showcase img')];
+  const dots = document.getElementById('sc-dots');
+  dots.innerHTML = imgs.map((_, i) => `<button aria-label="Screenshot ${i + 1}"${i ? '' : ' class="on"'}></button>`).join('');
+  let i = 0, timer;
+  const show = (n) => {
+    imgs[i].classList.remove('on'); dots.children[i].classList.remove('on');
+    i = (n + imgs.length) % imgs.length;
+    imgs[i].classList.add('on'); dots.children[i].classList.add('on');
+    document.getElementById('sc-design').textContent = imgs[i].dataset.design;
+    document.getElementById('sc-cap').textContent = imgs[i].dataset.cap;
+  };
+  const go = () => { clearInterval(timer); timer = setInterval(() => show(i + 1), 4500); };
+  [...dots.children].forEach((d, n) => (d.onclick = () => { show(n); go(); }));
+  document.querySelector('#showcase .screen').onclick = () => { show(i + 1); go(); };
+  go();
+})();
+
+// Live ticker: the latest unlocks from public profiles.
+document.addEventListener('DOMContentLoaded', async function live() {
+  try {
+    const { items } = await (await fetch('/api/live')).json();
+    if (items.length < 3) return;
+    const one = items.map((x) => `<a class="item" href="profile.html?u=${encodeURIComponent(x.gamertag)}">${pic(x, true)}<span><b>${esc(x.gamertag)}</b> unlocked <b>${esc(x.name)}</b> <span class="muted">${esc(x.title)} · ${x.points}G · ${ago(x.time)}</span></span></a>`).join('');
+    document.getElementById('live-run').innerHTML = one + one;
+    document.getElementById('live').hidden = false;
+  } catch {}
 });
 </script>
 </body>

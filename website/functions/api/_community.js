@@ -11,6 +11,8 @@
 // Admin:     GET /api/admin/summary   PATCH /api/admin/mappers/:id {status}
 //            PATCH /api/admin/requests/:id {status}   POST /api/admin/news   DELETE /api/admin/news/:id
 
+import { badText } from './_filter.js';
+
 const STATUSES = { mapper: ['new', 'contacted', 'accepted', 'declined'], request: ['open', 'planned', 'added', 'declined'] };
 const clip = (s, n) => String(s ?? '').trim().slice(0, n);
 
@@ -29,20 +31,55 @@ export async function rateLimit(env, req, action, max, window) {
   return true;
 }
 
-/** Profile badges, worked out from what the database knows. */
+/** The site's own achievements, worked out from what the database knows.
+ * Every one comes back, with `unlocked` saying whether this user has it
+ * (the Developer one only when unlocked). */
+export const SITE_ACHIEVEMENTS = [
+  { id: 'founder', name: 'Founder', text: 'One of the first 100 members', icon: '🌱' },
+  { id: 'linked', name: 'Plugged In', text: 'Linked the app to the website', icon: '🔌' },
+  { id: 'first', name: 'First Pop', text: 'Unlocked your first achievement', icon: '✨' },
+  { id: 'fifty', name: 'Half Century', text: 'Unlocked 50 achievements', icon: '🎖️' },
+  { id: 'hundred', name: 'Centurion', text: 'Unlocked 100 achievements', icon: '💯' },
+  { id: 'club1k', name: '1K Club', text: 'Earned 1,000 Gamerscore', icon: '🥉' },
+  { id: 'club5k', name: '5K Club', text: 'Earned 5,000 Gamerscore', icon: '🥈' },
+  { id: 'club10k', name: '10K Club', text: 'Earned 10,000 Gamerscore', icon: '🥇' },
+  { id: 'complete', name: 'Completionist', text: 'Finished a game 100%', icon: '🏆' },
+  { id: 'collector', name: 'Collector', text: 'Played 5 supported games', icon: '📚' },
+  { id: 'social', name: 'Social Butterfly', text: 'Made 5 friends', icon: '🦋' },
+  { id: 'tipster', name: 'Tipster', text: 'Wrote a tip for an achievement', icon: '💡' },
+  { id: 'helpful', name: 'Helpful', text: 'A tip of yours got 5 votes', icon: '🤝' },
+  { id: 'talker', name: 'Conversation Starter', text: 'Started a forum thread', icon: '💬' },
+  { id: 'solver', name: 'Problem Solver', text: 'Your reply was picked as the answer', icon: '✅' },
+  { id: 'voter', name: 'Voice of the People', text: 'Voted for a game request', icon: '🗳️' },
+  { id: 'mapper', name: 'Mapper', text: 'Maps achievements for everyone', icon: '🗺️' },
+  { id: 'bounty', name: 'Bounty Hunter', text: 'Mapped a claimed achievement', icon: '🎯' },
+  { id: 'dev', name: 'Developer', text: 'Builds Achievement Hub', icon: '🛠️', hidden: true },
+];
+
 export async function badges(env, user) {
-  const out = [];
-  if (user.id <= 100) out.push({ id: 'founder', name: 'Founder', text: 'One of the first 100 members' });
-  if (user.is_admin) out.push({ id: 'dev', name: 'Developer', text: 'Builds Achievement Hub' });
-  const mapper = await env.DB.prepare("SELECT 1 FROM mapper_applications WHERE user_id = ? AND status = 'accepted'").bind(user.id).first();
-  if (mapper) out.push({ id: 'mapper', name: 'Mapper', text: 'Maps achievements for everyone' });
-  const g = await env.DB.prepare('SELECT SUM(points) AS pts, SUM(unlocked = total AND total > 0) AS done, COUNT(*) AS games FROM player_games WHERE user_id = ?').bind(user.id).first();
-  if (g && g.done) out.push({ id: 'complete', name: 'Completionist', text: `Finished ${g.done} game${g.done > 1 ? 's' : ''} 100%` });
-  if (g && g.pts >= 1000) out.push({ id: 'club', name: `${Math.floor(g.pts / 1000)}K Club`, text: `${g.pts.toLocaleString()} Gamerscore` });
-  if (g && g.games >= 5) out.push({ id: 'collector', name: 'Collector', text: `${g.games} games played` });
-  const guides = await env.DB.prepare('SELECT COUNT(*) AS n FROM guides WHERE user_id = ?').bind(user.id).first();
-  if (guides && guides.n) out.push({ id: 'guide', name: 'Guide Writer', text: `${guides.n} tip${guides.n > 1 ? 's' : ''} written` });
-  return out;
+  const r = await env.DB.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM app_tokens WHERE user_id = ?1) AS apps,
+       (SELECT COALESCE(SUM(unlocked), 0) FROM player_games WHERE user_id = ?1) AS unlocked,
+       (SELECT COALESCE(SUM(points), 0) FROM player_games WHERE user_id = ?1) AS points,
+       (SELECT COUNT(*) FROM player_games WHERE user_id = ?1 AND unlocked = total AND total > 0) AS done,
+       (SELECT COUNT(*) FROM player_games WHERE user_id = ?1) AS games,
+       (SELECT COUNT(*) FROM friends WHERE status = 'accepted' AND (requester = ?1 OR addressee = ?1)) AS friends,
+       (SELECT COUNT(*) FROM guides WHERE user_id = ?1) AS tips,
+       (SELECT COUNT(*) FROM guides WHERE user_id = ?1 AND votes >= 5) AS good_tips,
+       (SELECT COUNT(*) FROM forum_threads WHERE user_id = ?1) AS threads,
+       (SELECT COUNT(*) FROM forum_threads t JOIN forum_posts p ON p.id = t.answer WHERE p.user_id = ?1) AS answers,
+       (SELECT COUNT(*) FROM request_votes WHERE user_id = ?1) AS votes,
+       (SELECT COUNT(*) FROM mapper_applications WHERE user_id = ?1 AND status = 'accepted') AS mapper,
+       (SELECT COUNT(*) FROM bounties WHERE user_id = ?1 AND status = 'done') AS bounties`,
+  ).bind(user.id).first();
+  const has = {
+    founder: user.id <= 100, linked: r.apps > 0 || r.games > 0, first: r.unlocked >= 1, fifty: r.unlocked >= 50, hundred: r.unlocked >= 100,
+    club1k: r.points >= 1000, club5k: r.points >= 5000, club10k: r.points >= 10000, complete: r.done > 0, collector: r.games >= 5,
+    social: r.friends >= 5, tipster: r.tips > 0, helpful: r.good_tips > 0, talker: r.threads > 0, solver: r.answers > 0,
+    voter: r.votes > 0, mapper: r.mapper > 0 || !!user.is_admin, bounty: r.bounties > 0, dev: !!user.is_admin,
+  };
+  return SITE_ACHIEVEMENTS.map((a) => ({ ...a, unlocked: !!has[a.id] })).filter((a) => !a.hidden || a.unlocked);
 }
 
 export async function community(c) {
@@ -84,6 +121,7 @@ export async function community(c) {
       if (!(await rateLimit(env, req, 'request', 10, 86400))) return fail(429, "That's plenty of requests for today.");
       const title = clip(b.title, 120);
       if (title.length < 2) return fail(400, 'Which game?');
+      if (badText(title, b.notes)) return fail(400, badText(title, b.notes));
       const dupe = await env.DB.prepare('SELECT id FROM game_requests WHERE title = ? COLLATE NOCASE').bind(title).first();
       if (dupe) return fail(409, 'Someone already asked for that one; vote for it instead!');
       const r = await env.DB.prepare('INSERT INTO game_requests (title, store, notes, user_id, created, votes) VALUES (?, ?, ?, ?, ?, 1)')
@@ -118,6 +156,7 @@ export async function community(c) {
       const b = await body(req);
       const text = clip(b.body, 2000);
       if (text.length < 10) return fail(400, 'Write a little more (10+ characters).');
+      if (badText(text)) return fail(400, badText(text));
       await env.DB.prepare('INSERT INTO guides (game, achievement, user_id, body, created) VALUES (?, ?, ?, ?, ?)')
         .bind(game, clip(b.achievement, 80), u.id, text, now()).run();
       return json({ ok: true }, 201);
@@ -184,6 +223,7 @@ export async function community(c) {
     const b = await body(req);
     const title = clip(b.game, 120);
     if (title.length < 2) return fail(400, 'Which game?');
+    if (badText(title, b.note)) return fail(400, badText(title, b.note));
     const notes = [clip(b.note, 400), b.exe && 'exe: ' + clip(b.exe, 200), b.anticheat && 'anti-cheat: ' + clip(b.anticheat, 100), !u && b.gamertag && 'from: ' + clip(b.gamertag, 40)]
       .filter(Boolean).join(' · ');
     const dupe = await env.DB.prepare('SELECT id FROM game_requests WHERE title = ? COLLATE NOCASE').bind(title).first();
@@ -256,6 +296,16 @@ export async function community(c) {
       const { status } = await body(req);
       if (!['new', 'merged', 'rejected'].includes(status)) return fail(400, 'Bad status.');
       await env.DB.prepare('UPDATE shared_mappings SET status = ? WHERE id = ?').bind(status, Number(parts[2])).run();
+      return json({ ok: true });
+    }
+    if (parts[1] === 'users' && parts[2] && parts[3] === 'picture' && method === 'DELETE') {
+      // Take down an inappropriate gamer picture.
+      const who = await env.DB.prepare('SELECT id, gamertag FROM users WHERE gamertag = ?').bind(decodeURIComponent(parts[2])).first();
+      if (!who) return fail(404, 'No such gamertag.');
+      await env.DB.batch([
+        env.DB.prepare('DELETE FROM gamerpics WHERE user_id = ?').bind(who.id),
+        env.DB.prepare('UPDATE users SET avatar = ? WHERE id = ?').bind(who.gamertag[0].toUpperCase(), who.id),
+      ]);
       return json({ ok: true });
     }
     if (parts[1] === 'news' && method === 'POST') {

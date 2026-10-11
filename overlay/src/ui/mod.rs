@@ -13,7 +13,7 @@ use crate::media::{Kind, Media};
 use crate::profile::{format_ago, Profile};
 use crate::Fonts;
 use anim::{ease_out_back, ease_out_cubic, lerp, lerp_color, Anim};
-use hudhook::imgui::{Condition, StyleColor, StyleVar, Ui, WindowFlags};
+use hudhook::imgui::{Condition, DrawListMut, StyleColor, StyleVar, Ui, WindowFlags};
 use list::AchList;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc::Receiver;
@@ -378,12 +378,12 @@ impl Panel {
                             self.inside(ui, fonts, media, game, profile, keys, pad, [left, origin[1]], right - left, height, layout);
                         }
                         Skin::Metro => {
-                            self.metro_frame(ui, fonts, profile, origin, width, height);
+                            self.metro_frame(ui, fonts, media, profile, origin, width, height);
                             let layout = Layout { pad_x: 48.0, top: 100.0, footer: 56.0, blades: None };
                             self.inside(ui, fonts, media, game, profile, keys, pad, origin, width, height, layout);
                         }
                         Skin::Classic => {
-                            self.classic_frame(ui, fonts, profile, origin, width, height);
+                            self.classic_frame(ui, fonts, media, profile, origin, width, height);
                             let layout = Layout { pad_x: 24.0, top: 134.0, footer: 56.0, blades: None };
                             self.inside(ui, fonts, media, game, profile, keys, pad, origin, width, height, layout);
                         }
@@ -856,7 +856,7 @@ impl Panel {
 
     /// Metro: light grey backdrop, lowercase tabs across the top, gamer card
     /// at the top right.
-    fn metro_frame(&mut self, ui: &Ui, fonts: &Fonts, profile: &Profile, origin: [f32; 2], width: f32, height: f32) {
+    fn metro_frame(&mut self, ui: &Ui, fonts: &Fonts, media: &Media, profile: &Profile, origin: [f32; 2], width: f32, height: f32) {
         let max = [origin[0] + width, origin[1] + height];
         {
             let dl = ui.get_window_draw_list();
@@ -882,11 +882,11 @@ impl Panel {
             x += size[0] + 30.0;
         }
         drop(_f);
-        self.gamer_card(ui, fonts, profile, [origin[0] + width - 48.0, origin[1] + 30.0], 44.0, false);
+        self.gamer_card(ui, fonts, media, profile, [origin[0] + width - 48.0, origin[1] + 30.0], 44.0, false);
     }
 
     /// Classic: dark blue panel, gamer card header, slanted green tabs.
-    fn classic_frame(&mut self, ui: &Ui, fonts: &Fonts, profile: &Profile, origin: [f32; 2], width: f32, height: f32) {
+    fn classic_frame(&mut self, ui: &Ui, fonts: &Fonts, media: &Media, profile: &Profile, origin: [f32; 2], width: f32, height: f32) {
         let max = [origin[0] + width, origin[1] + height];
         {
             let dl = ui.get_window_draw_list();
@@ -897,7 +897,7 @@ impl Panel {
             let t = ui.calc_text_size(label);
             dl.add_text([max[0] - 24.0 - t[0], origin[1] + 24.0], col(with_alpha(GREEN, 0.9)), label);
         }
-        self.gamer_card(ui, fonts, profile, [origin[0] + 24.0, origin[1] + 18.0], 52.0, true);
+        self.gamer_card(ui, fonts, media, profile, [origin[0] + 24.0, origin[1] + 18.0], 52.0, true);
 
         let y = origin[1] + 86.0;
         let h = 32.0;
@@ -970,7 +970,7 @@ impl Panel {
                 ui.get_window_draw_list().add_text([pos[0] + 1.0, pos[1] + 2.0], col([0.0, 0.08, 0.0, 0.40]), heading);
                 ui.get_window_draw_list().add_text(pos, col(pal().hint_text), heading);
             });
-            self.gamer_card(ui, fonts, profile, [area.right - 30.0, origin[1] + (band - 40.0) / 2.0 + 2.0], 40.0, false);
+            self.gamer_card(ui, fonts, media, profile, [area.right - 30.0, origin[1] + (band - 40.0) / 2.0 + 2.0], 40.0, false);
         }
 
         // While the blades fan out the open one is still narrow: show its
@@ -995,7 +995,7 @@ impl Panel {
                     },
                     Blade::Games => self.games(ui, fonts, media, game, profile),
                     Blade::Requests => self.requests(ui, fonts, media, game, profile, keys, pad),
-                    Blade::Friends => self.friends(ui, fonts),
+                    Blade::Friends => self.friends(ui, fonts, media),
                 })
             })
         });
@@ -1044,7 +1044,7 @@ impl Panel {
 
     /// Gamer picture, gamertag and gamerscore at `anchor` (its top-left
     /// corner when `from_left`, else its top-right).
-    fn gamer_card(&mut self, ui: &Ui, fonts: &Fonts, profile: &Profile, anchor: [f32; 2], pic: f32, from_left: bool) {
+    fn gamer_card(&mut self, ui: &Ui, fonts: &Fonts, media: &Media, profile: &Profile, anchor: [f32; 2], pic: f32, from_left: bool) {
         let score = self.anim.to("score", profile.gamerscore() as f32, 4.0, 0.0);
         let score_text = group_digits(score.round() as u32);
         let tag_w = {
@@ -1065,12 +1065,10 @@ impl Panel {
         {
             let dl = ui.get_window_draw_list();
             dl.add_rect([pmin[0] + 1.0, pmin[1] + 2.0], [pmax[0] + 1.0, pmax[1] + 2.0], [0.0, 0.0, 0.0, 0.25]).filled(true).rounding(4.0).build();
-            gradient(&dl, pmin, pmax, GREEN_LIGHT, GREEN_DARK);
+            gamer_pic(ui, &dl, fonts, media, &profile.avatar, &profile.gamertag, pmin, pmax);
             if pal().frame[3] > 0.0 {
                 dl.add_rect(pmin, pmax, WHITE).rounding(4.0).thickness(2.0).build();
             }
-            let _f = ui.push_font(fonts.large);
-            centered_text(ui, &dl, pmin, pmax, WHITE, &profile.gamertag.chars().next().unwrap_or('?').to_uppercase().to_string());
         }
         ui.set_cursor_screen_pos([x + pic + 12.0, right_top[1] + 1.0]);
         {
@@ -1108,7 +1106,7 @@ impl Panel {
 
     #[allow(clippy::too_many_arguments)]
     /// Friends' profiles: Gamerscore, what they're playing, latest unlocks.
-    fn friends(&mut self, ui: &Ui, fonts: &Fonts) {
+    fn friends(&mut self, ui: &Ui, fonts: &Fonts, media: &Media) {
         let (list, status) = crate::social::friends();
         if list.is_empty() {
             empty(ui, fonts, if status.is_empty() { "No friends yet." } else { &status });
@@ -1125,10 +1123,14 @@ impl Panel {
             {
                 let dl = ui.get_window_draw_list();
                 card_box(&dl, p, [p[0] + width, p[1] + h]);
-                let dot = if f.online(now) { [0.35, 0.85, 0.3, 1.0] } else { [0.5, 0.5, 0.5, 0.8] };
-                dl.add_circle([p[0] + 20.0, p[1] + 24.0], 6.0, dot).filled(true).build();
+                let (pmin, pmax) = ([p[0] + 12.0, p[1] + 12.0], [p[0] + h - 12.0, p[1] + h - 12.0]);
+                gamer_pic(ui, &dl, fonts, media, &f.avatar, &f.gamertag, pmin, pmax);
+                dl.add_rect(pmin, pmax, [1.0, 1.0, 1.0, 0.6]).thickness(1.5).build();
+                let dot = if f.online(now) { [0.35, 0.85, 0.3, 1.0] } else { [0.5, 0.5, 0.5, 0.9] };
+                dl.add_circle([pmax[0] - 2.0, pmax[1] - 2.0], 7.5, [0.0, 0.0, 0.0, 0.6]).filled(true).build();
+                dl.add_circle([pmax[0] - 2.0, pmax[1] - 2.0], 6.0, dot).filled(true).build();
             }
-            ui.set_cursor_screen_pos([p[0] + 36.0, p[1] + 10.0]);
+            ui.set_cursor_screen_pos([p[0] + h + 6.0, p[1] + 10.0]);
             ui.group(|| {
                 {
                     let _f = ui.push_font(fonts.title);
@@ -1320,14 +1322,11 @@ impl Panel {
         let title_off = card_title(ui, fonts, o, left_w, &profile.gamertag);
         let body = [o[0] + 14.0, o[1] + title_off + 12.0];
         {
-            // Gamer picture: the initial on a green tile.
+            // Gamer picture.
             let dl = ui.get_window_draw_list();
             let (pmin, pmax) = (body, [body[0] + 76.0, body[1] + 76.0]);
-            gradient(&dl, pmin, pmax, GREEN_LIGHT, GREEN_DARK);
+            gamer_pic(ui, &dl, fonts, media, &profile.avatar, &profile.gamertag, pmin, pmax);
             dl.add_rect(pmin, pmax, WHITE).thickness(2.0).build();
-            let _f = ui.push_font(fonts.large);
-            centered_text(ui, &dl, pmin, pmax, WHITE, &profile.gamertag.chars().next().unwrap_or('?').to_uppercase().to_string());
-            drop(_f);
             // Five stars for overall completion (where the 360 showed rep).
             let filled = (completion * 5.0).round() as usize;
             for k in 0..5 {
@@ -1746,7 +1745,8 @@ impl Panel {
                     }
                     let badge_w = store_badge(ui, fonts, max[0] - 24.0, min[1] + row_h / 2.0, &store);
                     let tx = min[0] + row_h + 8.0;
-                    let text_w = width - row_h - 8.0 - badge_w - 20.0;
+                    // (The badge starts 24 in from the right; keep a gap before it.)
+                    let text_w = width - row_h - 8.0 - badge_w - 24.0 - 16.0;
                     ui.set_cursor_screen_pos([tx, min[1] + 8.0]);
                     {
                         let _f = ui.push_font(fonts.title);
@@ -2058,6 +2058,20 @@ impl Panel {
             })
         });
     }
+}
+
+/// A gamer picture: the player's uploaded one (once downloaded), else the
+/// letter or emoji (or the gamertag's initial) on a green tile.
+#[allow(clippy::too_many_arguments)]
+fn gamer_pic(ui: &Ui, dl: &DrawListMut, fonts: &Fonts, media: &Media, avatar: &str, gamertag: &str, pmin: [f32; 2], pmax: [f32; 2]) {
+    if let Some((tex, _)) = avatar.starts_with("img:").then(|| media.get(Kind::Gamerpic, "", gamertag)).flatten() {
+        dl.add_image(tex, pmin, pmax).build();
+        return;
+    }
+    gradient(dl, pmin, pmax, GREEN_LIGHT, GREEN_DARK);
+    let letter = if avatar.is_empty() || avatar.starts_with("img:") { gamertag.chars().next().unwrap_or('?').to_uppercase().to_string() } else { avatar.to_string() };
+    let _f = ui.push_font(fonts.large);
+    centered_text(ui, dl, pmin, pmax, WHITE, &letter);
 }
 
 fn group_digits(n: u32) -> String {

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<title>Mapping board · Achievement Hub</title>
+<meta name="description" content="Achievements that still need mapping or testing, and who is working on them.">
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mapping board · Achievement Hub">
+<meta property="og:description" content="Achievements that still need mapping or testing, and who is working on them.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap" style="max-width:1000px">
+  <h1 style="margin-bottom:6px">Mapping board</h1>
+  <p class="muted" style="margin-top:0">Every achievement here still needs work. <b>Needs mapping</b>: nobody has found how the game tracks it yet. <b>Needs testing</b>: it's mapped, but no player has unlocked it yet, so it isn't confirmed.</p>
+  <div id="who"></div>
+  <div class="ftags" id="tabs">
+    <button data-v="map" class="on">🗺️ Needs mapping <span id="n-map"></span></button>
+    <button data-v="test">🧪 Needs testing <span id="n-test"></span></button>
+    <button data-v="claimed">🎯 Claimed <span id="n-claimed"></span></button>
+  </div>
+  <div id="board"><div class="skel" style="height:70px;margin-bottom:10px"></div><div class="skel" style="height:70px"></div></div>
+</div></section></main>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  let view = 'map', data = [], claims = [], who = null;
+  const key = (g, a) => g + '/' + a;
+  async function load() {
+    const [list, counts, b] = await Promise.all([games(), fetch('/api/unlock-counts').then((r) => r.json()).catch(() => ({})), api('/bounties')]);
+    claims = b.claims; who = b.me;
+    data = (await Promise.all(list.map((g) => game(g.id).catch(() => null)))).filter(Boolean).map((g) => ({
+      ...g,
+      items: g.achievements.map((a) => ({ ...a, state: !a.tracked ? 'map' : (counts[g.id] || {})[a.id] ? 'ok' : 'test' })),
+    }));
+    $('#who').innerHTML = !who
+      ? `<div class="card" style="margin:14px 0"><a href="login.html?next=bounties.html">Log in</a> as a mapper to claim achievements. Not a mapper yet? <a href="mappers.html">Apply here</a>; it's opt-in, nobody is signed up automatically.</div>`
+      : !who.mapper ? `<div class="card" style="margin:14px 0">Want to claim some? <a href="mappers.html">Apply to be a mapper</a>. Anyone can help with <b>Needs testing</b> just by playing: the first unlock confirms it.</div>` : '';
+    draw();
+  }
+  function draw() {
+    const claimOf = (g, a) => claims.find((c) => c.game === g && c.achievement === a);
+    const all = data.flatMap((g) => g.items.map((a) => ({ g, a, c: claimOf(g.id, a.id) })));
+    const pick = { map: (x) => x.a.state === 'map', test: (x) => x.a.state === 'test', claimed: (x) => !!x.c && x.c.status !== 'done' };
+    for (const v of Object.keys(pick)) $('#n-' + v).textContent = all.filter(pick[v]).length;
+    const rows = all.filter(pick[view]);
+    const byGame = {};
+    for (const r of rows) (byGame[r.g.id] ||= { g: r.g, rows: [] }).rows.push(r);
+    const label = { claimed: 'Claimed', submitted: 'Mapping sent in', done: 'Done' };
+    $('#board').innerHTML = rows.length ? Object.values(byGame).map(({ g, rows }) => `
+      <h2 style="margin:26px 0 12px;font-size:1.3rem"><a href="game.html?g=${encodeURIComponent(g.id)}" style="color:inherit">${esc(g.title)}</a> <span class="muted" style="font-size:1rem">${rows.length}</span></h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${rows.map(({ a, c }) => `
+        <div class="bounty">${a.icon ? `<img src="${esc(a.icon)}" alt="" loading="lazy">` : ''}
+          <div class="grow"><b>${esc(a.name)}</b><span title="${esc(a.description)}">${esc(a.description)}</span>
+            ${c ? `<span>${pic(c, true).replace('pic', 'pic tiny')} ${label[c.status]} by ${esc(c.gamertag)} · ${ago(c.claimed)}</span>` : ''}</div>
+          ${actions(g, a, c)}
+        </div>`).join('')}</div>`).join('') : `<div class="card" style="margin-top:14px"><p class="muted" style="margin:0">Nothing here right now. 🎉</p></div>`;
+  }
+  function actions(g, a, c) {
+    if (!who) return '';
+    const k = `data-g="${esc(g.id)}" data-a="${esc(a.id)}"`;
+    if (!c) return who.mapper && a.state !== 'ok' ? `<button class="btn small" ${k} data-do="claim">Claim</button>` : '';
+    const mine = c.gamertag === who.gamertag;
+    let out = '';
+    if (mine && c.status === 'claimed') out += `<button class="btn small primary" ${k} data-do="submitted">Sent it</button>`;
+    if (who.admin && c.status !== 'done') out += `<button class="btn small primary" ${k} data-do="done">Done</button>`;
+    if (mine || who.admin) out += `<button class="linkbtn" ${k} data-do="release">Release</button>`;
+    return `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${out}</div>`;
+  }
+  $('#tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    view = b.dataset.v;
+    for (const x of $('#tabs').children) x.classList.toggle('on', x === b);
+    draw();
+  });
+  $('#board').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-do]'); if (!b) return;
+    const path = `/bounties/${encodeURIComponent(b.dataset.g)}/${encodeURIComponent(b.dataset.a)}`;
+    try {
+      if (b.dataset.do === 'claim') await api(path, { method: 'POST' });
+      else if (b.dataset.do === 'release') await api(path, { method: 'DELETE' });
+      else await api(path, { method: 'PATCH', body: { status: b.dataset.do } });
+      claims = (await api('/bounties')).claims; draw();
+    } catch (err) { alert(err.message); }
+  });
+  load().catch((err) => ($('#board').innerHTML = `<p class="muted">${esc(err.message)}</p>`));
+});
+</script>
+</body></html>

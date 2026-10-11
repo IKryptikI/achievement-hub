@@ -23,7 +23,7 @@ mod toast;
 mod ui;
 
 use hudhook::hooks::dx9::ImguiDx9Hooks;
-use hudhook::imgui::{Context, FontConfig, FontId, FontSource, Io, TextureId, Ui};
+use hudhook::imgui::{Context, FontConfig, FontGlyphRanges, FontId, FontSource, Io, TextureId, Ui};
 use hudhook::windows::Win32::Foundation::HINSTANCE;
 use hudhook::windows::Win32::System::LibraryLoader::GetModuleFileNameW;
 use hudhook::windows::Win32::System::SystemServices::DLL_PROCESS_ATTACH;
@@ -636,10 +636,13 @@ impl ImguiRenderLoop for Overlay {
         let scale = (screen_h * 0.92 / 700.0).max(0.5);
         ui::theme::set_font_scale(scale);
         log(&self.dir, &format!("ui scale {scale:.2} (screen height {screen_h})"));
+        // Latin, Latin-1 and Latin Extended-A, plus typographic punctuation
+        // (curly quotes, dashes, ellipsis, bullet) that store text uses.
+        const RANGES: &[u32] = &[0x0020, 0x017F, 0x2010, 0x2027, 0x2030, 0x203A, 0x20AC, 0x20AC, 0x2122, 0x2122, 0];
         let font = move |data: &'static [u8], size: f32| FontSource::TtfData {
             data,
             size_pixels: size * scale,
-            config: Some(FontConfig { oversample_h: 2, ..FontConfig::default() }),
+            config: Some(FontConfig { oversample_h: 2, glyph_ranges: FontGlyphRanges::from_slice(RANGES), ..FontConfig::default() }),
         };
         // Selawik: Microsoft's open-source (OFL) stand-in for Segoe UI.
         let light = include_bytes!("../assets/selawkl.ttf");
@@ -786,6 +789,13 @@ impl ImguiRenderLoop for Overlay {
         }
 
         if open {
+            // A gamer picture set on the website, and pictures downloaded.
+            if let Some(avatar) = social::take_avatar().filter(|a| *a != self.profile.avatar && !self.preview) {
+                self.profile.set_avatar(&avatar);
+            }
+            for (tag, path) in social::take_pictures() {
+                self.media.load_picture(&tag, path);
+            }
             self.panel.navigate(self.nav.swap(0, Ordering::Relaxed));
             self.panel.draw(ui, fonts, &self.media, self.game.as_ref(), &self.profile, keys, pad);
             if let Some(why) = self.panel.record_refused.take() {

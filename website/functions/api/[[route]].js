@@ -12,12 +12,15 @@
 //            POST /api/app/link {code} -> {token}       (the desktop app)
 //            PUT /api/app/progress {snapshot}           (app/overlay, Bearer token)
 //            GET /api/app/friends                       (app/overlay, Bearer token)
+//            PATCH /api/app/profile {avatar, motto, color} (app/overlay, Bearer token)
 //            POST /api/app/reset-password {new_password} (the linked app proves it's you)
 //
 // Website sessions are an HttpOnly cookie; the app uses a Bearer token.
 // Passwords are PBKDF2-SHA256 with a per-user salt; tokens are stored hashed.
 
 import { community, rateLimit, badges } from './_community.js';
+import { forum } from './_forum.js';
+import { badGamertag, badText } from './_filter.js';
 
 const SESSION_DAYS = 30;
 const PBKDF2_ITERATIONS = 60000;
@@ -105,6 +108,21 @@ async function setPassword(env, userId, password) {
 const GAMERTAG = /^[A-Za-z0-9 _-]{3,16}$/;
 const COLOR = /^#[0-9a-fA-F]{6}$/;
 
+/** A gamer picture typed in: a letter or emoji (1-2 characters). Uploaded
+ * pictures are "img:<version>", set only by PUT /api/me/picture. */
+function avatarValue(v) {
+  const s = [...String(v ?? '')].slice(0, 2).join('');
+  return s.startsWith('img:') || badText(s) ? null : s;
+}
+
+/** The image type of an uploaded picture (JPEG or PNG), or null. */
+function imageType(buf) {
+  const b = new Uint8Array(buf.slice(0, 8));
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
+  return null;
+}
+
 /** What anyone may see about a user (progress hidden if private and not a friend). */
 function publicProfile(u, progress, showProgress) {
   const p = {
@@ -176,6 +194,8 @@ export async function onRequest({ request: req, env, params }) {
       if (website) return fail(400, 'Something went wrong.'); // the hidden trap field
       if (!(await rateLimit(env, req, 'signup', 5, 3600))) return fail(429, 'Too many sign-ups from here. Try again in an hour.');
       if (!GAMERTAG.test(gamertag)) return fail(400, 'Gamertags are 3-16 letters, numbers, spaces, - or _.');
+      const bad = badGamertag(gamertag);
+      if (bad) return fail(400, bad);
       if (password.length < 8) return fail(400, 'Passwords need at least 8 characters.');
       if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(400, "That email doesn't look right.");
       if (await env.DB.prepare('SELECT 1 FROM users WHERE gamertag = ?').bind(gamertag.trim()).first())
@@ -237,20 +257,61 @@ export async function onRequest({ request: req, env, params }) {
       return json({ players: players.n, unlocks: Object.fromEntries(results.map((r) => [r.achievement, r.n])), mine });
     }
 
+    if (route === '/me/picture' && (method === 'PUT' || method === 'DELETE')) {
+      // Your own gamer picture (the browser crops and shrinks it first).
+      const u = await currentUser(env, req);
+      if (!u) return fail(401, 'Not logged in.');
+      if (method === 'DELETE') {
+        await env.DB.batch([
+          env.DB.prepare('DELETE FROM gamerpics WHERE user_id = ?').bind(u.id),
+          env.DB.prepare('UPDATE users SET avatar = ? WHERE id = ?').bind(u.gamertag[0].toUpperCase(), u.id),
+        ]);
+        return json({ ok: true });
+      }
+      if (!(await rateLimit(env, req, 'picture', 30, 86400))) return fail(429, "That's a lot of new pictures today. Try again tomorrow.");
+      const img = await req.arrayBuffer();
+      const type = imageType(img);
+      if (!type) return fail(400, 'Pictures need to be JPEG or PNG.');
+      if (img.byteLength > 200000) return fail(413, 'That picture is too big (200 KB at most).');
+      const t = now();
+      await env.DB.batch([
+        env.DB.prepare('INSERT OR REPLACE INTO gamerpics (user_id, img, type, updated) VALUES (?, ?, ?, ?)').bind(u.id, img, type, t),
+        env.DB.prepare('UPDATE users SET avatar = ? WHERE id = ?').bind('img:' + t, u.id),
+      ]);
+      return json({ ok: true, avatar: 'img:' + t });
+    }
+
+    if (route === '/me/card' && method === 'PUT') {
+      // The gamercard PNG, drawn by the owner's browser (see site.js).
+      const u = await currentUser(env, req);
+      if (!u) return fail(401, 'Not logged in.');
+      const png = await req.arrayBuffer();
+      const sig = new Uint8Array(png.slice(0, 8));
+      if (png.byteLength > 600000 || sig[0] !== 0x89 || sig[1] !== 0x50 || sig[2] !== 0x4e || sig[3] !== 0x47) return fail(400, 'Not a PNG.');
+      await env.DB.prepare('INSERT OR REPLACE INTO gamercards (user_id, png, updated) VALUES (?, ?, ?)').bind(u.id, png, now()).run();
+      return json({ ok: true });
+    }
+
     if (route === '/me') {
       const u = await currentUser(env, req);
       if (!u) return fail(401, 'Not logged in.');
       if (method === 'GET') {
         const progress = await env.DB.prepare('SELECT * FROM progress WHERE user_id = ?').bind(u.id).first();
         const apps = await env.DB.prepare('SELECT COUNT(*) AS n FROM app_tokens WHERE user_id = ?').bind(u.id).first();
-        return json({ ...publicProfile(u, progress, true), email: u.email, apps_linked: apps.n, is_admin: !!u.is_admin });
+        const card = await env.DB.prepare('SELECT updated FROM gamercards WHERE user_id = ?').bind(u.id).first();
+        return json({ ...publicProfile(u, progress, true), email: u.email, apps_linked: apps.n, is_admin: !!u.is_admin, card_updated: card ? card.updated : 0, achievements: await badges(env, u) });
       }
       if (method === 'PATCH') {
         const b = await body(req);
         const set = {};
+        const rude = badText(b.bio, b.motto);
+        if (rude) return fail(400, rude);
         if (b.bio !== undefined) set.bio = String(b.bio).slice(0, 400);
         if (b.motto !== undefined) set.motto = String(b.motto).slice(0, 60);
-        if (b.avatar !== undefined) set.avatar = [...String(b.avatar)].slice(0, 2).join('');
+        if (b.avatar !== undefined) {
+          set.avatar = avatarValue(b.avatar);
+          if (set.avatar === null) return fail(400, "That can't be your gamer picture.");
+        }
         if (b.favorite !== undefined) set.favorite = String(b.favorite).slice(0, 80);
         if (b.banner !== undefined) set.banner = String(b.banner).slice(0, 80);
         if (b.showcase !== undefined) {
@@ -264,6 +325,8 @@ export async function onRequest({ request: req, env, params }) {
         }
         if (b.gamertag !== undefined && b.gamertag !== u.gamertag) {
           if (!GAMERTAG.test(b.gamertag)) return fail(400, 'Gamertags are 3-16 letters, numbers, spaces, - or _.');
+          const bad = badGamertag(b.gamertag);
+          if (bad) return fail(400, bad);
           const taken = await env.DB.prepare('SELECT 1 FROM users WHERE gamertag = ? AND id != ?').bind(b.gamertag.trim(), u.id).first();
           if (taken) return fail(409, 'That gamertag is taken.');
           set.gamertag = b.gamertag.trim();
@@ -421,7 +484,29 @@ export async function onRequest({ request: req, env, params }) {
         return json({ ok: true, gamertag: u.gamertag });
       }
       if (route === '/app/friends' && method === 'GET') {
-        return json({ gamertag: u.gamertag, friends: (await friendList(env, u.id)).filter((f) => f.status === 'friend') });
+        return json({
+          gamertag: u.gamertag,
+          me: { avatar: u.avatar, color: u.color, motto: u.motto },
+          friends: (await friendList(env, u.id)).filter((f) => f.status === 'friend'),
+        });
+      }
+      if (route === '/app/profile' && method === 'PATCH') {
+        const b = await body(req);
+        const set = {};
+        const rude = badText(b.motto);
+        if (rude) return fail(400, rude);
+        if (b.avatar !== undefined) {
+          set.avatar = avatarValue(b.avatar);
+          if (set.avatar === null) return fail(400, "That can't be your gamer picture.");
+        }
+        if (b.motto !== undefined) set.motto = String(b.motto).slice(0, 60);
+        if (b.color !== undefined) {
+          if (!COLOR.test(b.color)) return fail(400, 'Pick a color like #3fae2a.');
+          set.color = b.color;
+        }
+        const keys = Object.keys(set);
+        if (keys.length) await env.DB.prepare(`UPDATE users SET ${keys.map((k) => k + ' = ?').join(', ')} WHERE id = ?`).bind(...keys.map((k) => set[k]), u.id).run();
+        return json({ ok: true });
       }
       if (route === '/app/reset-password' && method === 'POST') {
         const { new_password = '' } = await body(req);
@@ -436,7 +521,8 @@ export async function onRequest({ request: req, env, params }) {
       }
     }
 
-    const extra = await community({ req, env, parts, route, method, json, fail, body, currentUser, areFriends, appUser });
+    const ctx = { req, env, parts, route, method, json, fail, body, currentUser, areFriends, appUser };
+    const extra = (await community(ctx)) || (await forum(ctx));
     if (extra) return extra;
     return fail(404, 'Not found.');
   } catch (e) {

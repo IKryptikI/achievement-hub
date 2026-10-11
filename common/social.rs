@@ -135,6 +135,11 @@ pub struct RecentUnlock {
     pub name: String,
     pub points: u32,
     pub time: u64,
+    /// Game and achievement ids (so the website can show the icon).
+    #[serde(default)]
+    pub game: String,
+    #[serde(default)]
+    pub id: String,
 }
 
 /// Builds the public profile from the profile folder.
@@ -186,7 +191,7 @@ pub fn snapshot(profile: &Path, playing: Option<&str>) -> Profile {
         .filter_map(|(g, id, t)| {
             let s = summaries.get(g)?;
             let a = s.achievement.iter().find(|a| a.id == *id)?;
-            Some(RecentUnlock { title: full(s), name: a.name.clone(), points: a.points, time: *t })
+            Some(RecentUnlock { title: full(s), name: a.name.clone(), points: a.points, time: *t, game: g.clone(), id: id.clone() })
         })
         .collect();
     recent.sort_by(|a, b| b.time.cmp(&a.time));
@@ -211,6 +216,28 @@ pub fn snapshot(profile: &Path, playing: Option<&str>) -> Profile {
 struct FriendsReply {
     #[serde(default)]
     friends: Vec<Profile>,
+    #[serde(default)]
+    me: Option<Look>,
+}
+
+/// The player's own look, as set on the website or in the overlay.
+#[derive(Serialize, Deserialize, Default, Clone)]
+pub struct Look {
+    #[serde(default)]
+    pub avatar: String,
+    #[serde(default)]
+    pub color: String,
+    #[serde(default)]
+    pub motto: String,
+}
+
+/// The player's own look from the friends reply (None from older sites).
+pub fn parse_me(body: &[u8]) -> Option<Look> {
+    serde_json::from_slice::<FriendsReply>(body).ok().and_then(|r| r.me)
+}
+
+pub fn profile_url() -> String {
+    format!("{}/api/app/profile", site())
 }
 
 /// Friends' profiles from the website's reply.

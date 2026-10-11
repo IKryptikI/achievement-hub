@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<title>Thread · Achievement Hub</title>
+<meta name="description" content="Ask questions, get help, share your unlocks and talk with the Achievement Hub community.">
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Thread · Achievement Hub">
+<meta property="og:description" content="Ask questions, get help, share your unlocks and talk with the Achievement Hub community.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap" style="max-width:900px">
+  <p style="margin:0 0 14px"><a href="forum.html">← Forum</a></p>
+  <div id="t"><div class="skel" style="height:60px;margin-bottom:16px"></div><div class="skel" style="height:160px"></div></div>
+  <div id="reply"></div>
+</div></section></main>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const id = new URLSearchParams(location.search).get('t');
+  let d;
+  async function load() {
+    try { d = await api('/forum/' + encodeURIComponent(id)); } catch (err) { return ($('#t').innerHTML = `<p>${esc(err.message)}</p>`); }
+    const t = d.thread;
+    document.title = `${t.title} · Achievement Hub`;
+    const posts = d.posts;
+    const post = (p, i) => `
+      <div class="post${t.answer === p.id ? ' answer' : ''}" id="p${p.id}">
+        <a href="profile.html?u=${encodeURIComponent(p.gamertag || '')}">${pic(p, true)}</a>
+        <div class="content">
+          <div class="head">${nameTag(p)}<span class="muted" style="font-size:.85rem">${ago(p.created)}${p.edited ? ' · edited' : ''}</span>${t.answer === p.id ? '<span class="ftag answered">✓ Answer</span>' : ''}</div>
+          <div class="text">${richText(p.body)}</div>
+          <div class="tools">
+            ${p.reactions.map((r) => `<button class="react${r.mine ? ' mine' : ''}" data-react="${p.id}" data-e="${r.emoji}">${r.emoji} ${r.n}</button>`).join('')}
+            <span class="addr" style="position:relative"><button class="react add" data-pick="${p.id}" title="React">☺+</button></span>
+            ${i > 0 && d.can.answer ? `<button class="linkbtn" data-answer="${t.answer === p.id ? '' : p.id}">${t.answer === p.id ? 'Unmark answer' : 'Mark as answer'}</button>` : ''}
+            ${p.mine || d.can.admin ? `<button class="linkbtn" data-edit="${p.id}">Edit</button>` : ''}
+            ${(p.mine || d.can.admin) && i > 0 ? `<button class="linkbtn" data-del="${p.id}">Delete</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+    $('#t').innerHTML = `
+      <div style="margin-bottom:6px">${t.pinned ? '<span class="ftag">📌 Pinned</span>' : ''}${tagChip(t.tag)}${t.locked ? '<span class="ftag">🔒 Locked</span>' : ''}</div>
+      <h1 style="font-size:2rem;margin:6px 0 18px">${esc(t.title)}</h1>
+      ${d.can.admin ? `<div class="row" style="gap:8px;margin-bottom:14px"><button class="btn small" id="pin">${t.pinned ? 'Unpin' : 'Pin'}</button><button class="btn small" id="lock">${t.locked ? 'Unlock' : 'Lock'}</button><select id="retag" style="width:auto">${Object.keys(TAG_LOOK).map((x) => `<option value="${x}"${x === t.tag ? ' selected' : ''}>${TAG_LOOK[x][1]}</option>`).join('')}</select><button class="btn small danger" id="delt">Delete thread</button></div>` : ''}
+      ${posts.map(post).join('')}`;
+    $('#reply').innerHTML = d.can.reply
+      ? `<form id="rf" class="card"><label for="rb" style="margin-top:0">Reply</label><textarea id="rb" rows="4" maxlength="8000"></textarea><div id="rmsg"></div><p style="margin-bottom:0"><button class="btn primary">Reply</button></p></form>`
+      : (await me()) ? '<p class="muted">This thread is locked.</p>' : `<p class="muted"><a href="login.html?next=${encodeURIComponent(location.pathname + location.search)}">Log in</a> to reply.</p>`;
+    $('#rf')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try { await api(`/forum/${id}/posts`, { method: 'POST', body: { body: $('#rb').value } }); await load(); scrollTo(0, document.body.scrollHeight); }
+      catch (err) { note($('#rmsg'), err.message); }
+    });
+    const admin = (b) => api('/forum/' + id, { method: 'PATCH', body: b }).then(load);
+    $('#pin')?.addEventListener('click', () => admin({ pinned: !t.pinned }));
+    $('#lock')?.addEventListener('click', () => admin({ locked: !t.locked }));
+    $('#retag')?.addEventListener('change', (e) => admin({ tag: e.target.value }));
+    $('#delt')?.addEventListener('click', async () => { if (confirm('Delete this whole thread?')) { await api('/forum/' + id, { method: 'DELETE' }); location.href = 'forum.html'; } });
+  }
+  await load();
+
+  $('#t').addEventListener('click', async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    const act = async (fn) => { try { await fn(); await load(); } catch (err) { alert(err.message); } };
+    if (b.dataset.react) return act(() => api(`/forum/posts/${b.dataset.react}/react`, { method: 'POST', body: { emoji: b.dataset.e } }));
+    if (b.dataset.pick) {
+      if (!(await me())) return (location.href = 'login.html?next=' + encodeURIComponent(location.pathname + location.search));
+      document.querySelectorAll('.emoji-pick').forEach((x) => x.remove());
+      b.parentElement.insertAdjacentHTML('beforeend', `<span class="emoji-pick card" style="position:absolute;bottom:120%;left:0;z-index:5;display:flex;gap:4px;padding:6px;white-space:nowrap">${d.reactions.map((x) => `<button class="react" data-react="${b.dataset.pick}" data-e="${x}">${x}</button>`).join('')}</span>`);
+      return;
+    }
+    if (b.dataset.answer !== undefined) return act(() => api(`/forum/${id}/answer`, { method: 'POST', body: { post_id: b.dataset.answer ? Number(b.dataset.answer) : null } }));
+    if (b.dataset.del) return confirm('Delete this reply?') && act(() => api(`/forum/posts/${b.dataset.del}`, { method: 'DELETE' }));
+    if (b.dataset.edit) {
+      const p = d.posts.find((x) => x.id === Number(b.dataset.edit));
+      const box = $(`#p${p.id} .text`);
+      box.innerHTML = `<textarea rows="5" maxlength="8000">${esc(p.body)}</textarea><div class="row" style="gap:8px;margin-top:8px"><button class="btn small primary" data-save="${p.id}">Save</button><button class="btn small" data-cancel="1">Cancel</button></div>`;
+      box.querySelector('textarea').focus();
+      return;
+    }
+    if (b.dataset.cancel) return load();
+    if (b.dataset.save) {
+      const text = $(`#p${b.dataset.save} textarea`).value;
+      return act(() => api(`/forum/posts/${b.dataset.save}`, { method: 'PATCH', body: { body: text } }));
+    }
+  });
+});
+</script>
+</body></html>

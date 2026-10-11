@@ -48,7 +48,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       try { const d = await game(gid); for (const aid of aids) { const a = d.achievements.find((x) => x.id === aid); if (a) show.push({ ...a, game: d.title, gid }); } } catch {}
     }
   } catch {}
-  const badgeIcons = { founder: '🌱', dev: '🛠️', mapper: '🗺️', complete: '💯', club: '🏆', collector: '📚', guide: '💬' };
+  const ADMIN = !!((await me()) || {}).is_admin;
+  const pageUrl = `${location.origin}/profile?u=${encodeURIComponent(p.gamertag)}`;
+  const cardUrl = `${location.origin}/card/${encodeURIComponent(p.gamertag)}`;
   $('#p').innerHTML = `
     ${bannerArt ? `<div style="height:200px;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-60px;background:url('${esc(bannerArt)}') center/cover;mask-image:linear-gradient(#000 40%,transparent)"></div>` : ''}
     <div class="gamercard" style="--accent:${esc(p.color)};position:relative">${pic(p)}
@@ -57,14 +59,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div style="margin-top:6px">${status}</div></div>
       <div>${action}</div></div>
     <div id="msg"></div>
-    ${(p.badges || []).length ? `<div class="row" style="margin-top:16px">${p.badges.map((b) => `<span class="chip testing" title="${esc(b.text)}" style="font-size:.85rem;padding:5px 12px">${badgeIcons[b.id] || '⭐'} ${esc(b.name)}</span>`).join('')}</div>` : ''}
+    ${ADMIN && p.relation !== 'self' && (p.avatar || '').startsWith('img:') ? '<p><button class="btn small danger" id="rmpic">Remove their picture (admin)</button></p>' : ''}
+    ${(p.badges || []).length ? `<h2 style="margin-top:28px">Site achievements <span class="muted" style="font-size:1rem">${p.badges.filter((b) => b.unlocked).length} of ${p.badges.length}</span></h2>
+      <div class="siteach">${[...p.badges].sort((a, b) => b.unlocked - a.unlocked).map((b) => `<div class="a${b.unlocked ? '' : ' locked'}" title="${esc(b.text)}"><div class="i">${b.unlocked ? b.icon : '🔒'}</div><div><b>${esc(b.name)}</b><span>${esc(b.text)}</span></div></div>`).join('')}</div>` : ''}
     ${show.length ? `<h2 style="margin-top:28px">Showcase</h2><div class="grid">${show.map((a) => `
       <a class="card lift person" href="game.html?g=${encodeURIComponent(a.gid)}">${a.icon ? `<img src="${esc(a.icon)}" alt="" style="width:56px;height:56px;border-radius:10px">` : ''}
         <div class="grow"><b>${esc(a.name)}</b><br><span class="muted" style="font-size:.9rem">${esc(a.game)}</span></div><span class="gs">${a.points}</span></a>`).join('')}</div>` : ''}
     ${p.bio ? `<p style="margin-top:20px;white-space:pre-wrap">${esc(p.bio)}</p>` : ''}
     ${favorite ? `<p class="muted">Favorite game: <b style="color:var(--text)">${esc(favorite)}</b></p>` : ''}
     ${p.games === undefined
-      ? `<div class="card" style="margin-top:24px"><p class="muted">${esc(p.gamertag)} only shares their games with friends.</p></div>`
+      ? `<div class="card" style="margin-top:24px"><p class="muted" style="margin:0">${p.private ? `${esc(p.gamertag)} only shares their games with friends.` : p.relation === 'self' ? 'Link the app on your <a href="account.html">Account</a> page and your games show up here.' : `${esc(p.gamertag)} hasn't linked the app yet.`}</p></div>`
       : `<h2 style="margin-top:30px">Games</h2>
          <div class="grid">${p.games.length ? p.games.map((g) => `
            <a class="card game lift" href="game.html?g=${encodeURIComponent(g.id)}${p.relation === 'friend' ? '&vs=' + encodeURIComponent(p.gamertag) : ''}"><h3>${esc(g.title)}</h3>
@@ -74,7 +78,21 @@ document.addEventListener('DOMContentLoaded', async () => {
          ${p.recent.length ? '<div class="grid">' + p.recent.slice(0, 12).map((r) => `
            <div class="card"><b>${esc(r.name)}</b> <span class="gs" style="float:right">${r.points}</span><br>
              <span class="muted">${esc(r.title)} · ${new Date(r.time * 1000).toLocaleDateString()}</span></div>`).join('') + '</div>' : '<p class="muted">None yet.</p>'}`}
+    <h2 style="margin-top:30px">Gamercard</h2>
+    <div class="card"><img src="/card/${encodeURIComponent(p.gamertag)}.png?v=${Math.floor(Date.now() / 600000)}" alt="${esc(p.gamertag)}'s gamercard" style="width:100%;max-width:600px;border-radius:14px;display:block">
+      <p class="muted" style="margin-bottom:6px">Show it off in Discord, forums or your signature:</p>
+      <div class="row" style="gap:8px">${[['Link', cardUrl], ['Image', cardUrl + '.png'], ['BBCode', `[url=${pageUrl}][img]${cardUrl}.png[/img][/url]`], ['Markdown', `[![${p.gamertag}](${cardUrl}.png)](${pageUrl})`], ['HTML', `<a href="${pageUrl}"><img src="${cardUrl}.png" alt="${p.gamertag}"></a>`]]
+        .map(([k, v]) => `<button class="btn small" data-copy="${esc(k === 'Link' ? pageUrl : v)}">Copy ${k}</button>`).join('')}</div><div id="cmsg"></div></div>
     <p class="muted" style="margin-top:30px">Member since ${new Date(p.member_since * 1000).toLocaleDateString()}</p>`;
+  $('#p').addEventListener('click', async (e) => {
+    const v = e.target.dataset.copy;
+    if (!v) return;
+    try { await navigator.clipboard.writeText(v); note($('#cmsg'), 'Copied!', true); } catch { prompt('Copy this:', v); }
+  });
+  $('#rmpic')?.addEventListener('click', async () => {
+    if (!confirm(`Remove ${p.gamertag}'s gamer picture?`)) return;
+    try { await api(`/admin/users/${encodeURIComponent(p.gamertag)}/picture`, { method: 'DELETE' }); location.reload(); } catch (err) { note($('#msg'), err.message); }
+  });
   const act = async (fn) => { try { await fn(); location.reload(); } catch (err) { note($('#msg'), err.message); } };
   $('#add')?.addEventListener('click', () => act(() => api('/friends', { method: 'POST', body: { gamertag: p.gamertag } })));
   $('#acc')?.addEventListener('click', () => act(() => api(`/friends/${encodeURIComponent(p.gamertag)}/accept`, { method: 'POST' })));

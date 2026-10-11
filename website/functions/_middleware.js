@@ -36,6 +36,7 @@ export async function onRequest({ request, next, env }) {
         return setMeta(res, {
           'og:title': `${u.gamertag} · Achievement Hub`,
           'og:description': `${u.gamerscore || 0} Gamerscore${u.motto ? ' · ' + u.motto : ''}`,
+          'og:image': `${url.origin}/card/${encodeURIComponent(u.gamertag)}.png`,
         });
       }
     }

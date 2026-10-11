@@ -18,6 +18,51 @@ static STATE: Mutex<Option<(Vec<Profile>, String)>> = Mutex::new(None);
 /// Set after an unlock: publish soon.
 static KICK: AtomicBool = AtomicBool::new(false);
 const EVERY: Duration = Duration::from_secs(180);
+/// The gamer picture set on the website, for the overlay to pick up.
+static SERVER_AVATAR: Mutex<Option<String>> = Mutex::new(None);
+/// Gamer pictures downloaded (gamertag, file), for the overlay to load.
+static PICTURES: Mutex<Vec<(String, PathBuf)>> = Mutex::new(Vec::new());
+
+/// A gamer picture chosen on the website since the last call.
+pub fn take_avatar() -> Option<String> {
+    SERVER_AVATAR.lock().ok()?.take()
+}
+
+/// Gamer pictures ready to show since the last call.
+pub fn take_pictures() -> Vec<(String, PathBuf)> {
+    PICTURES.lock().map(|mut p| std::mem::take(&mut *p)).unwrap_or_default()
+}
+
+/// Makes sure each uploaded picture ("img:<version>") is saved in the
+/// profile's `pictures` folder, downloading new versions, and queues the
+/// ones not shown yet.
+fn fetch_pictures(profile: &std::path::Path, who: &[(String, String)], shown: &mut std::collections::HashSet<PathBuf>) {
+    let dir = profile.join("pictures");
+    for (tag, avatar) in who {
+        let Some(version) = avatar.strip_prefix("img:") else { continue };
+        let safe: String = tag.chars().map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' }).collect();
+        let path = dir.join(format!("{safe}-{version}.jpg"));
+        if !path.exists() {
+            let url = format!("{}/pic/{}?v={version}", shared::site(), tag.replace(' ', "%20"));
+            let Ok(bytes) = crate::storeinfo::get(&url) else { continue };
+            let _ = std::fs::create_dir_all(&dir);
+            // (Old versions of this player's picture go.)
+            for old in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
+                if old.file_name().to_string_lossy().starts_with(&format!("{safe}-")) {
+                    let _ = std::fs::remove_file(old.path());
+                }
+            }
+            if std::fs::write(&path, bytes).is_err() {
+                continue;
+            }
+        }
+        if shown.insert(path.clone()) {
+            if let Ok(mut p) = PICTURES.lock() {
+                p.push((tag.clone(), path));
+            }
+        }
+    }
+}
 
 fn set(friends: Option<Vec<Profile>>, status: &str) {
     if let Ok(mut s) = STATE.lock() {
@@ -42,7 +87,7 @@ pub fn demo() {
         gamerscore: g,
         playing: playing.map(String::from),
         sent,
-        recent: vec![shared::RecentUnlock { title: latest.1.into(), name: latest.0.into(), points: 20, time: now }],
+        recent: vec![shared::RecentUnlock { title: latest.1.into(), name: latest.0.into(), points: 20, time: now, ..Default::default() }],
         ..Default::default()
     };
     set(
@@ -68,6 +113,7 @@ pub fn start(profile: PathBuf, playing: Option<String>, log: impl Fn(&str) + Sen
         }
         set(None, "Connecting…");
         let mut logged = false;
+        let mut shown = std::collections::HashSet::new();
         loop {
             // (Re-read each time: the app may have linked or unlinked.)
             let Some(me) = shared::load(&profile) else {
@@ -85,6 +131,14 @@ pub fn start(profile: PathBuf, playing: Option<String>, log: impl Fn(&str) + Sen
                     Some(e) => set(None, &e),
                     None => {
                         let list = shared::parse_friends(&reply);
+                        let mut who: Vec<(String, String)> = list.iter().map(|f| (f.gamertag.clone(), f.avatar.clone())).collect();
+                        if let Some(look) = shared::parse_me(&reply) {
+                            who.push((p.gamertag.clone(), look.avatar.clone()));
+                            if let Ok(mut a) = SERVER_AVATAR.lock() {
+                                *a = Some(look.avatar);
+                            }
+                        }
+                        fetch_pictures(&profile, &who, &mut shown);
                         let status = if list.is_empty() { "No friends yet. Add some by gamertag on the Achievement Hub website." } else { "" };
                         set(Some(list), status);
                     }

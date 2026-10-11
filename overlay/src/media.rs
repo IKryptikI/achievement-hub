@@ -36,6 +36,8 @@ pub enum Kind {
     /// A piece of an installed theme pack (item id = file name stem;
     /// background frames are "swirl-00"...).
     Theme,
+    /// A player's uploaded gamer picture (item id = gamertag).
+    Gamerpic,
 }
 
 type Key = (Kind, String, String);
@@ -91,6 +93,17 @@ impl Media {
                 if let Some(img) = load(&thumb_path(&shots, &id)) {
                     let _ = tx.send((key(Kind::Shot, &game, &id), img));
                 }
+            }
+        });
+    }
+
+    /// Loads a player's gamer picture (downloaded by `social`) in the background.
+    pub fn load_picture(&self, gamertag: &str, path: PathBuf) {
+        let tx = self.tx.clone();
+        let tag = gamertag.to_string();
+        std::thread::spawn(move || {
+            if let Some(img) = load(&path) {
+                let _ = tx.send((key(Kind::Gamerpic, "", &tag), img));
             }
         });
     }

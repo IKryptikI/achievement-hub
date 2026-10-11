@@ -91,6 +91,10 @@ struct ProfileFile {
     /// they turn it on in the app.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     mapper: bool,
+    /// Gamer picture: "gp:<preset>" or a letter/emoji (from the website or
+    /// picked in the overlay).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    avatar: String,
 }
 
 pub struct Profile {
@@ -100,6 +104,8 @@ pub struct Profile {
     pub dashboard: String,
     /// Opted in to record mode (see ProfileFile::mapper).
     pub mapper: bool,
+    /// Gamer picture (see ProfileFile::avatar).
+    pub avatar: String,
     /// (game, achievement) -> unlock time.
     unlocked: HashMap<(String, String), u64>,
     pub games: HashMap<String, GameSummary>,
@@ -137,11 +143,11 @@ impl Profile {
         log(&format!("profile: {}", dir.display()));
 
         let file = fs::read_to_string(dir.join("profile.toml")).ok().and_then(|t| toml::from_str::<ProfileFile>(&t).ok()).unwrap_or_else(|| {
-            let file = ProfileFile { gamertag: default_gamertag(), dashboard: String::new(), mapper: false };
+            let file = ProfileFile { gamertag: default_gamertag(), dashboard: String::new(), mapper: false, avatar: String::new() };
             let _ = fs::write(dir.join("profile.toml"), toml::to_string(&file).unwrap_or_default());
             file
         });
-        let (gamertag, dashboard, mapper) = (file.gamertag, file.dashboard, file.mapper);
+        let (gamertag, dashboard, mapper, avatar) = (file.gamertag, file.dashboard, file.mapper, file.avatar);
 
         let unlocked = read_unlocks(&dir.join("unlocks.txt")).into_iter().map(|(g, a, t)| ((g, a), t)).collect();
 
@@ -153,13 +159,23 @@ impl Profile {
             .map(|g| (g.id.clone(), g))
             .collect();
 
-        Profile { dir, gamertag, dashboard, mapper, unlocked, games }
+        Profile { dir, gamertag, dashboard, mapper, avatar, unlocked, games }
     }
 
     /// Saves the dashboard design choice to profile.toml.
     pub fn set_dashboard(&mut self, name: &str) {
         self.dashboard = name.to_string();
-        let file = ProfileFile { gamertag: self.gamertag.clone(), dashboard: self.dashboard.clone(), mapper: self.mapper };
+        self.save();
+    }
+
+    /// Saves the gamer picture to profile.toml.
+    pub fn set_avatar(&mut self, avatar: &str) {
+        self.avatar = avatar.to_string();
+        self.save();
+    }
+
+    fn save(&self) {
+        let file = ProfileFile { gamertag: self.gamertag.clone(), dashboard: self.dashboard.clone(), mapper: self.mapper, avatar: self.avatar.clone() };
         let _ = fs::write(self.dir.join("profile.toml"), toml::to_string(&file).unwrap_or_default());
     }
 

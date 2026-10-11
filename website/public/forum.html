@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<title>Forum · Achievement Hub</title>
+<meta name="description" content="Ask questions, get help, share your unlocks and talk with the Achievement Hub community.">
+<meta property="og:site_name" content="Achievement Hub">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Forum · Achievement Hub">
+<meta property="og:description" content="Ask questions, get help, share your unlocks and talk with the Achievement Hub community.">
+<meta property="og:image" content="https://achievementhub.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logos/logo-1.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<main><section><div class="wrap" style="max-width:980px">
+  <div class="row" style="justify-content:space-between;align-items:flex-end">
+    <div><h1 style="margin-bottom:6px">Forum</h1><p class="muted" style="margin:0">Questions, help, bugs, mapping talk and showing off.</p></div>
+    <button class="btn primary" id="new">New post</button>
+  </div>
+
+  <form id="compose" class="card" hidden style="margin-top:20px">
+    <div class="row">
+      <div style="flex:1;min-width:220px"><label for="ct">Title</label><input id="ct" maxlength="120" required></div>
+      <div><label for="cg">Tag</label><select id="cg"></select></div>
+    </div>
+    <label for="cb">Post</label><textarea id="cb" rows="6" maxlength="8000" placeholder="Paste a picture link (ending in .png, .jpg, .gif or .webp) to show it. **bold** and `code` work too."></textarea>
+    <input name="website" id="hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+    <div id="cmsg"></div>
+    <p><button class="btn primary">Post</button> <button class="btn" type="button" id="cancel">Cancel</button></p>
+  </form>
+
+  <div class="row" style="margin-top:20px"><input id="q" type="search" placeholder="Search threads…" style="max-width:340px"></div>
+  <div class="ftags" id="tags"></div>
+  <div class="threads" id="list"><div class="skel" style="height:110px"></div><div class="skel" style="height:110px"></div><div class="skel" style="height:110px"></div></div>
+</div></section></main>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(location.search);
+  let tag = params.get('tag') || '', q = '';
+  const m = await me();
+  const tags = Object.keys(TAG_LOOK);
+  $('#tags').innerHTML = `<button data-t="" class="${tag ? '' : 'on'}">All</button>` + tags.map((t) => `<button data-t="${t}" class="${t === tag ? 'on' : ''}">${TAG_LOOK[t][0]} ${TAG_LOOK[t][1]}</button>`).join('');
+  $('#cg').innerHTML = tags.filter((t) => t !== 'announcements' || (m && m.is_admin)).map((t) => `<option value="${t}">${TAG_LOOK[t][1]}</option>`).join('');
+  $('#cg').value = tag && tag !== 'announcements' ? tag : 'help';
+
+  async function load() {
+    const qs = new URLSearchParams({ ...(tag && { tag }), ...(q && { q }) });
+    let threads;
+    try { ({ threads } = await api('/forum?' + qs)); } catch (err) { return ($('#list').innerHTML = `<p class="muted">${esc(err.message)}</p>`); }
+    $('#list').innerHTML = threads.length ? threads.map((t, i) => `
+      <a class="thread${t.pinned ? ' pinned' : ''}" href="thread.html?t=${t.id}" style="animation-delay:${Math.min(i, 12) * 0.03}s">
+        <div class="body">
+          ${t.pinned ? '<span class="ftag">📌 Pinned</span>' : ''}${tagChip(t.tag)}${t.locked ? '<span class="ftag">🔒 Locked</span>' : ''}${t.answered ? '<span class="ftag answered">✓ Answered</span>' : ''}
+          <h3>${esc(t.title)}</h3>
+          <div class="prev">${nameTag(t)}: ${esc(t.preview)}</div>
+          <div class="meta">${t.reactions ? `<span class="pill">${t.top_emoji} ${t.reactions}</span>` : ''}<span>💬 ${t.replies}</span><span>${ago(t.last_post)}</span></div>
+        </div>
+        ${t.thumb ? `<img class="thumb" src="${esc(t.thumb)}" alt="" loading="lazy">` : ''}
+      </a>`).join('') : `<div class="card"><p class="muted" style="margin:0">${q ? 'Nothing matches that.' : 'No threads here yet. Start one!'}</p></div>`;
+  }
+  load();
+
+  $('#tags').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    tag = b.dataset.t;
+    for (const x of $('#tags').children) x.classList.toggle('on', x === b);
+    history.replaceState(null, '', tag ? '?tag=' + tag : location.pathname);
+    load();
+  });
+  let timer;
+  $('#q').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { q = $('#q').value.trim(); load(); }, 300); });
+  $('#new').addEventListener('click', () => {
+    if (!m) return (location.href = 'login.html?next=' + encodeURIComponent('forum.html'));
+    $('#compose').hidden = false; $('#ct').focus();
+  });
+  $('#cancel').addEventListener('click', () => ($('#compose').hidden = true));
+  $('#compose').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const r = await api('/forum', { method: 'POST', body: { title: $('#ct').value, tag: $('#cg').value, body: $('#cb').value, website: $('#hp').value } });
+      location.href = 'thread.html?t=' + r.id;
+    } catch (err) { note($('#cmsg'), err.message); }
+  });
+});
+</script>
+</body></html>

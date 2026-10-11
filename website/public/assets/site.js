@@ -29,9 +29,39 @@ async function me() {
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const $ = (sel, root = document) => root.querySelector(sel);
 
+/** The gamer picture: the player's uploaded one, or a letter/emoji on their color. */
 function pic(p, small = false) {
-  return `<div class="pic${small ? ' small' : ''}" style="--accent:${esc(p.color || '#4cc931')}">${esc(p.avatar || (p.gamertag || '?')[0].toUpperCase())}</div>`;
+  const a = p.avatar || '';
+  if (a.startsWith('img:') && p.gamertag) return `<div class="pic img${small ? ' small' : ''}"><img src="/pic/${encodeURIComponent(p.gamertag)}?v=${esc(a.slice(4))}" alt="" loading="lazy"></div>`;
+  return `<div class="pic${small ? ' small' : ''}" style="--accent:${esc(p.color || '#4cc931')}">${esc(a && !a.startsWith('img:') ? a : (p.gamertag || '?')[0].toUpperCase())}</div>`;
 }
+
+/** Crops an image file to a square and shrinks it to a 256px JPEG. */
+async function squarePicture(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise((ok, bad) => { img.onload = ok; img.onerror = () => bad(new Error("That file isn't a picture we can read.")); img.src = url; });
+    const side = Math.min(img.naturalWidth, img.naturalHeight);
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, 256, 256);
+    g.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+    return await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.88));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+const ago = (t) => {
+  const s = Date.now() / 1000 - t;
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 86400 * 30) return `${Math.floor(s / 86400)}d ago`;
+  return new Date(t * 1000).toLocaleDateString();
+};
 const online = (p) => p.sent && Date.now() / 1000 - p.sent < 15 * 60;
 function note(el, text, good) {
   el.innerHTML = text ? `<div class="note ${good ? 'good' : 'bad'}">${esc(text)}</div>` : '';
@@ -124,10 +154,10 @@ function setTheme(t) {
   const page = (p) => p.replace(/\.html$/, '').replace(/^index$/, '') || '';
   const here = page(location.pathname.split('/').pop());
   const links = [
-    ['index.html', 'Home'], ['games.html', 'Games'], ['requests.html', 'Requests'], ['friends.html', 'Friends'],
+    ['index.html', 'Home'], ['games.html', 'Games'], ['forum.html', 'Forum'], ['requests.html', 'Requests'], ['friends.html', 'Friends'],
     ['download.html', 'Download'], ['about.html', 'About'],
   ];
-  const active = here === 'game' ? 'games' : here;
+  const active = { game: 'games', thread: 'forum', bounties: 'games' }[here] || here;
   document.body.insertAdjacentHTML('afterbegin', `
     <header class="top"><div class="wrap">
       <a class="brand" href="index.html"><span class="orb"></span>Achievement Hub</a>
@@ -145,7 +175,7 @@ function setTheme(t) {
   document.body.insertAdjacentHTML('beforeend', `
     <footer><div class="wrap">
       <span>Achievement Hub: achievements for the PC games that never had them. Free and open source (GPL-3.0).</span>
-      <span><a href="news.html">News</a> · <a href="mappers.html">Become a mapper</a> · <a href="faq.html">FAQ</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="about.html#credits">Credits</a> · <a href="${SITE.github}" target="_blank" rel="noopener">GitHub</a></span>
+      <span><a href="news.html">News</a> · <a href="mappers.html">Become a mapper</a> · <a href="bounties.html">Mapping board</a> · <a href="faq.html">FAQ</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="about.html#credits">Credits</a> · <a href="${SITE.github}" target="_blank" rel="noopener">GitHub</a></span>
     </div></footer>`);
 
   // Reveal sections as they scroll in.
@@ -172,4 +202,65 @@ function setTheme(t) {
     ? `<a href="profile.html?u=${encodeURIComponent(m.gamertag)}" class="person" title="Your profile">${pic(m, true)}</a>
        <a class="btn small" href="account.html">Account</a>${m.is_admin ? '<a class="btn small" href="admin.html">Admin</a>' : ''}`
     : `<a class="btn small" href="login.html">Log in</a><a class="btn small primary" href="signup.html">Sign up</a>`;
+  if (m) {
+    siteUnlocks(m);
+    // Keep the gamercard image fresh (drawn here, see refreshCard).
+    if (Date.now() / 1000 - (m.card_updated || 0) > 3 * 3600 || (m.sent || 0) > (m.card_updated || 0))
+      setTimeout(() => refreshCard(m).catch(() => {}), 1500);
+  }
 })();
+
+/** Draws /card/<you>.svg to a PNG and saves it, so links to your
+ * gamercard work in Discord and forums (which don't show SVG). */
+async function refreshCard(m) {
+  const svg = await (await fetch(`/card/${encodeURIComponent(m.gamertag)}.svg?t=${Date.now()}`)).text();
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  try {
+    const img = new Image();
+    await new Promise((ok, bad) => { img.onload = ok; img.onerror = bad; img.src = url; });
+    const c = document.createElement('canvas');
+    c.width = 1200; c.height = 420;
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const png = await new Promise((ok) => c.toBlob(ok, 'image/png'));
+    await fetch('/api/me/card', { method: 'PUT', body: png, credentials: 'same-origin' });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** Site achievements earned since this browser last looked pop up like in-game ones. */
+function siteUnlocks(m) {
+  const key = 'ah-site-ach-' + m.gamertag;
+  let seen = null;
+  try { seen = JSON.parse(localStorage.getItem(key)); } catch {}
+  const have = (m.achievements || []).filter((a) => a.unlocked).map((a) => a.id);
+  try { localStorage.setItem(key, JSON.stringify(have)); } catch {}
+  if (!Array.isArray(seen)) seen = have.filter((id) => id === 'founder' || id === 'dev'); // first visit: pop the rest once
+  const fresh = (m.achievements || []).filter((a) => a.unlocked && !seen.includes(a.id)).slice(0, 4);
+  fresh.forEach((a, i) => setTimeout(() => siteToast(a), 900 + i * 4200));
+}
+function siteToast(a) {
+  const el = document.createElement('div');
+  el.className = 'site-toast';
+  el.innerHTML = `<div class="ring">${a.icon}</div><div><small>Site achievement unlocked</small><b>${esc(a.name)}</b></div>`;
+  document.body.append(el);
+  requestAnimationFrame(() => el.classList.add('on'));
+  setTimeout(() => { el.classList.remove('on'); setTimeout(() => el.remove(), 600); }, 3600);
+}
+
+// ── Forum text: plain text with links, pictures, **bold** and `code` ──
+function richText(s) {
+  return esc(s)
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')
+    .replace(/https:\/\/[^\s<]+/g, (u) => /\.(png|jpe?g|gif|webp)(\?\S*)?$/i.test(u)
+      ? `<a href="${u}" target="_blank" rel="noopener nofollow"><img class="post-img" src="${u}" alt="" loading="lazy"></a>`
+      : `<a href="${u}" target="_blank" rel="noopener nofollow ugc">${u}</a>`)
+    .replace(/\n/g, '<br>');
+}
+const TAG_LOOK = {
+  announcements: ['📌', 'Announcements'], help: ['🙋', 'Help'], bug: ['🐞', 'Bug'], 'game-support': ['🎮', 'Game support'],
+  mapping: ['🗺️', 'Mapping'], suggestion: ['💡', 'Suggestion'], showcase: ['🏆', 'Showcase'], general: ['💬', 'General'],
+};
+const tagChip = (t) => `<span class="ftag ftag-${esc(t)}">${(TAG_LOOK[t] || ['', t])[1]}</span>`;
+const nameTag = (x) => `<span class="fname" style="color:${esc(x.color || '#4cc931')}">${esc(x.gamertag || 'deleted')}</span>${x.is_admin ? '<span class="dev-tag">DEV</span>' : ''}`;
