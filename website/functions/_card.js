@@ -1,6 +1,7 @@
 // The gamercard: a small image of someone's profile (gamer picture,
 // gamertag, Gamerscore, latest achievements) for Discord, forums and
-// signatures. Built as SVG; /card/<gamertag>.png renders it with resvg.
+// signatures. Built as SVG; the owner's browser turns it into the PNG
+// served at /card/<gamertag>.png (see refreshCard in site.js).
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]);
 const fit = (s, n) => ([...String(s ?? '')].length > n ? [...s].slice(0, n - 1).join('') + '…' : String(s ?? ''));

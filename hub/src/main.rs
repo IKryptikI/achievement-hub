@@ -8,6 +8,8 @@ mod dbsync;
 mod friends;
 mod library;
 mod mappings;
+mod profile;
+mod updater;
 mod requests;
 mod safety;
 mod scan;
@@ -35,6 +37,7 @@ const INK: Color32 = Color32::from_rgb(10, 15, 20);
 
 #[derive(PartialEq, Clone, Copy)]
 enum View {
+    Achievements,
     Library,
     Add,
     Supported,
@@ -72,6 +75,12 @@ struct Hub {
     search: String,
     /// (message, good news?)
     message: Option<(String, bool)>,
+    /// Self-update (background, at start): its result, and the version
+    /// installed (restart to use it).
+    update_rx: Option<Receiver<Option<updater::Outcome>>>,
+    updated_to: Option<String>,
+    /// Games whose overlay was brought up to date at start.
+    refresh_rx: Option<Receiver<Vec<String>>>,
     request: requests::Request,
     request_rx: Option<Receiver<Result<(), String>>>,
     unlocks: HashMap<String, usize>,
@@ -82,7 +91,20 @@ struct Hub {
     /// This player's identity, friends' profiles, and calls in flight.
     social: Option<friends::Social>,
     friend_profiles: Vec<friends::Profile>,
-    friends_rx: Option<Receiver<Result<Vec<friends::Profile>, String>>>,
+    /// My Achievements: the profile (re-read every few seconds while shown),
+    /// the game picked, the filter (0 all, 1 unlocked, 2 locked) and icons.
+    my_profile: Option<(profile::Profile, std::time::Instant)>,
+    ach_game: Option<String>,
+    ach_filter: u8,
+    icons: HashMap<PathBuf, Option<egui::TextureHandle>>,
+    /// Your own look from the website (gamer picture).
+    my_look: Option<friends::social::Look>,
+    /// Gamer pictures by "gamertag|avatar" (None while loading or if none),
+    /// and the channel they arrive on.
+    pics: HashMap<String, Option<egui::TextureHandle>>,
+    pic_tx: std::sync::mpsc::Sender<(String, Option<egui::ColorImage>)>,
+    pic_rx: Receiver<(String, Option<egui::ColorImage>)>,
+    friends_rx: Option<Receiver<Result<(Vec<friends::Profile>, Option<friends::social::Look>), String>>>,
     publish_rx: Option<Receiver<Result<String, String>>>,
     publish_status: String,
     /// The link code being typed, and the link call in flight.
@@ -149,6 +171,7 @@ impl Hub {
             let _ = sync_tx.send(dbsync::sync());
         });
         let (cover_tx, cover_rx) = covers::spawn_loader();
+        let (pic_tx, pic_rx) = channel();
         Hub {
             view: View::Library,
             library: Library::load(),
@@ -170,6 +193,17 @@ impl Hub {
             share_rx: None,
             social: friends::social::load(&library::profile_dir()),
             friend_profiles: Vec::new(),
+            my_profile: None,
+            update_rx: None,
+            updated_to: None,
+            refresh_rx: None,
+            ach_game: None,
+            ach_filter: 0,
+            icons: HashMap::new(),
+            my_look: None,
+            pics: HashMap::new(),
+            pic_tx,
+            pic_rx,
             friends_rx: None,
             publish_rx: None,
             publish_status: String::new(),
@@ -203,6 +237,181 @@ impl Hub {
                 None => Status::Mappable,
             },
         }
+    }
+
+    /// A small image from the profile folder (icons), loaded once.
+    fn icon(&mut self, ctx: &egui::Context, path: &std::path::Path) -> Option<egui::TextureHandle> {
+        if let Some(t) = self.icons.get(path) {
+            return t.clone();
+        }
+        let tex = image::open(path).ok().map(|img| {
+            let img = img.resize_to_fill(64, 64, image::imageops::FilterType::Triangle).into_rgba8();
+            ctx.load_texture(path.to_string_lossy(), egui::ColorImage::from_rgba_unmultiplied([64, 64], img.as_raw()), Default::default())
+        });
+        self.icons.insert(path.to_path_buf(), tex.clone());
+        tex
+    }
+
+    /// My Achievements: totals, games with progress, and each game's list.
+    fn achievements_view(&mut self, ui: &mut egui::Ui) {
+        // (Re-read now and then: the overlay records unlocks while you play.)
+        if self.my_profile.as_ref().is_none_or(|(_, at)| at.elapsed() > std::time::Duration::from_secs(5)) {
+            self.my_profile = Some((profile::Profile::load(), std::time::Instant::now()));
+        }
+        let Some((p, loaded)) = self.my_profile.take() else { return };
+        let ctx = ui.ctx().clone();
+        let total: usize = p.games.iter().map(|g| g.achievement.len()).sum();
+        let got = p.total_unlocked();
+        egui::Frame::new().fill(PANEL).inner_margin(14).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.horizontal(|ui| {
+                ui.label(RichText::new(&p.gamertag).size(20.0).strong().color(Color32::WHITE));
+                ui.add_space(12.0);
+                ui.label(RichText::new(format!("{} G", p.gamerscore())).size(18.0).strong().color(GREEN));
+                ui.add_space(12.0);
+                ui.label(RichText::new(format!("{got} of {total} achievements · {} games", p.games.len())).color(MUTED));
+            });
+            ui.add(egui::ProgressBar::new(if total > 0 { got as f32 / total as f32 } else { 0.0 }).desired_height(6.0).fill(GREEN));
+            let latest: Vec<String> = p.recent(3).iter().map(|r| format!("{} ({})", r.achievement.name, r.game)).collect();
+            if !latest.is_empty() {
+                ui.label(RichText::new(format!("Latest: {}", latest.join("  ·  "))).color(TEXT));
+            }
+        });
+        ui.add_space(10.0);
+        if p.games.is_empty() {
+            ui.label(RichText::new("Nothing yet. Install the overlay in a game and play: your achievements show up here.").color(MUTED));
+            self.my_profile = Some((p, loaded));
+            return;
+        }
+        if self.ach_game.as_ref().is_none_or(|id| !p.games.iter().any(|g| &g.id == id)) {
+            self.ach_game = p.games.first().map(|g| g.id.clone());
+        }
+        let avail = ui.available_size();
+        ui.horizontal_top(|ui| {
+            // Left: games, most recently played first.
+            ui.allocate_ui(egui::vec2(320.0, avail.y), |ui| {
+                egui::ScrollArea::vertical().id_salt("ach_games").auto_shrink([false, false]).show(ui, |ui| {
+                    for g in &p.games {
+                        let (n, t, pts) = p.progress(g);
+                        let on = self.ach_game.as_deref() == Some(g.id.as_str());
+                        let r = egui::Frame::new().fill(if on { CARD_HOVER } else { CARD }).inner_margin(10).show(ui, |ui| {
+                            ui.set_width(ui.available_width());
+                            ui.horizontal(|ui| {
+                                match self.icon(&ctx, &p.game_icon(&g.id)) {
+                                    Some(tex) => {
+                                        ui.add(egui::Image::new(&tex).fit_to_exact_size(egui::vec2(40.0, 40.0)));
+                                    }
+                                    None => {
+                                        ui.allocate_exact_size(egui::vec2(40.0, 40.0), egui::Sense::hover());
+                                    }
+                                }
+                                ui.vertical(|ui| {
+                                    ui.label(RichText::new(&g.title).strong().color(if on { Color32::WHITE } else { TEXT }));
+                                    ui.label(RichText::new(format!("{n} / {t} · {pts} / {} G", g.total_points)).size(12.0).color(MUTED));
+                                    ui.add(egui::ProgressBar::new(if t > 0 { n as f32 / t as f32 } else { 0.0 }).desired_height(4.0).fill(GREEN));
+                                });
+                            });
+                        });
+                        if r.response.interact(egui::Sense::click()).clicked() {
+                            self.ach_game = Some(g.id.clone());
+                        }
+                        ui.add_space(6.0);
+                    }
+                });
+            });
+            ui.add_space(12.0);
+            // Right: the picked game's achievements.
+            ui.vertical(|ui| {
+                let Some(g) = p.games.iter().find(|g| Some(&g.id) == self.ach_game.as_ref()) else { return };
+                let (n, t, pts) = p.progress(g);
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(g.full_title()).size(18.0).strong().color(Color32::WHITE));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        for (i, label) in [(2u8, "Locked"), (1, "Unlocked"), (0, "All")] {
+                            if ui.selectable_label(self.ach_filter == i, label).clicked() {
+                                self.ach_filter = i;
+                            }
+                        }
+                    });
+                });
+                ui.label(RichText::new(format!("{n} of {t} unlocked · {pts} / {} G", g.total_points)).color(MUTED));
+                ui.add_space(6.0);
+                egui::ScrollArea::vertical().id_salt("ach_list").auto_shrink([false, false]).show(ui, |ui| {
+                    for a in &g.achievement {
+                        let when = p.unlocked_at(&g.id, &a.id);
+                        if (self.ach_filter == 1 && when.is_none()) || (self.ach_filter == 2 && when.is_some()) {
+                            continue;
+                        }
+                        let hidden = a.secret && when.is_none();
+                        egui::Frame::new().fill(CARD).inner_margin(10).show(ui, |ui| {
+                            ui.set_width(ui.available_width());
+                            ui.horizontal(|ui| {
+                                // Official icon, else the one cut from the unlock screenshot.
+                                let official = p.dir.join("icons").join(&g.id).join(format!("{}.jpg", a.id));
+                                let path = if official.exists() { official } else { p.achievement_icon(&g.id, &a.id) };
+                                let (rect, _) = ui.allocate_exact_size(egui::vec2(48.0, 48.0), egui::Sense::hover());
+                                match self.icon(&ctx, &path) {
+                                    Some(tex) if !hidden => {
+                                        let tint = if when.is_some() { Color32::WHITE } else { Color32::from_gray(80) };
+                                        ui.painter().image(tex.id(), rect, egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), tint);
+                                    }
+                                    _ => {
+                                        ui.painter().rect_filled(rect, 6.0, Color32::from_gray(40));
+                                        ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, if hidden { "?" } else { "" }, egui::FontId::proportional(22.0), MUTED);
+                                    }
+                                }
+                                ui.vertical(|ui| {
+                                    ui.set_width(ui.available_width() - 70.0);
+                                    let name = if hidden { "Secret achievement" } else { a.name.as_str() };
+                                    ui.label(RichText::new(name).strong().color(if when.is_some() { Color32::WHITE } else { TEXT }));
+                                    let desc = if hidden { "Keep playing to reveal this one." } else { a.description.as_str() };
+                                    ui.label(RichText::new(desc).color(MUTED));
+                                    let status = match when {
+                                        Some(t) if t > 0 => format!("Unlocked {}  ·  {}", profile::format_date(t), profile::format_ago(t)),
+                                        Some(_) => "Unlocked".into(),
+                                        None if !a.trackable => "Not tracked yet".into(),
+                                        None => "Locked".into(),
+                                    };
+                                    ui.label(RichText::new(status).size(12.0).color(if when.is_some() { GREEN } else { MUTED }));
+                                });
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    ui.label(RichText::new(format!("{} G", a.points)).strong().color(if when.is_some() { GREEN } else { MUTED }));
+                                });
+                            });
+                        });
+                        ui.add_space(5.0);
+                    }
+                });
+            });
+        });
+        self.my_profile = Some((p, loaded));
+    }
+
+    /// A gamer picture: the uploaded one (loaded in the background), else
+    /// the letter or emoji on the player's color, like the website.
+    fn gamer_pic(&mut self, ui: &mut egui::Ui, gamertag: &str, avatar: &str, color: &str, size: f32) {
+        while let Ok((key, img)) = self.pic_rx.try_recv() {
+            let tex = img.map(|i| ui.ctx().load_texture(&key, i, Default::default()));
+            self.pics.insert(key, tex);
+        }
+        let key = format!("{gamertag}|{avatar}");
+        if avatar.starts_with("img:") && !self.pics.contains_key(&key) {
+            self.pics.insert(key.clone(), None);
+            let (tx, tag, av, k) = (self.pic_tx.clone(), gamertag.to_string(), avatar.to_string(), key.clone());
+            std::thread::spawn(move || {
+                let _ = tx.send((k, friends::picture(&tag, &av)));
+            });
+        }
+        let (rect, _) = ui.allocate_exact_size(egui::vec2(size, size), egui::Sense::hover());
+        if let Some(Some(tex)) = self.pics.get(&key) {
+            ui.painter().image(tex.id(), rect, egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), Color32::WHITE);
+        } else {
+            let fill = Color32::from_hex(color).unwrap_or(GREEN);
+            ui.painter().rect_filled(rect, 6.0, fill);
+            let letter = if avatar.is_empty() || avatar.starts_with("img:") { gamertag.chars().next().unwrap_or('?').to_uppercase().to_string() } else { avatar.to_string() };
+            ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, letter, egui::FontId::proportional(size * 0.5), Color32::WHITE);
+        }
+        ui.painter().rect_stroke(rect, 6.0, egui::Stroke::new(1.5, Color32::from_white_alpha(140)), egui::StrokeKind::Inside);
     }
 
     /// A game's cover thumbnail; decoded (and downloaded if needed) in the
@@ -268,6 +477,32 @@ impl eframe::App for Hub {
         if !self.social_started {
             self.social_started = true;
             self.refresh_social();
+            // Update the app itself, and the overlay in every game.
+            let (tx, rx) = channel();
+            std::thread::spawn(move || {
+                let _ = tx.send(updater::run());
+            });
+            self.update_rx = Some(rx);
+            let (tx, rx) = channel();
+            let games = self.library.game.clone();
+            std::thread::spawn(move || {
+                let _ = tx.send(library::refresh_overlays(&games));
+            });
+            self.refresh_rx = Some(rx);
+        }
+        if let Some(Ok(outcome)) = self.update_rx.as_ref().map(|r| r.try_recv()) {
+            self.update_rx = None;
+            match outcome {
+                Some(updater::Outcome::Updated(v)) => self.updated_to = Some(v),
+                Some(updater::Outcome::Failed(e)) => self.message = Some((e, false)),
+                None => {}
+            }
+        }
+        if let Some(Ok(names)) = self.refresh_rx.as_ref().map(|r| r.try_recv()) {
+            self.refresh_rx = None;
+            if !names.is_empty() && self.message.is_none() {
+                self.message = Some((format!("Updated the overlay in {}.", names.join(", ")), true));
+            }
         }
         if let Some(rx) = &self.sync_rx {
             if let Ok(result) = rx.try_recv() {
@@ -318,7 +553,7 @@ impl eframe::App for Hub {
             ui.horizontal(|ui| {
                 ui.label(RichText::new("ACHIEVEMENT HUB").color(GREEN).strong().size(15.0));
                 ui.add_space(24.0);
-                for (view, label) in [(View::Library, "LIBRARY"), (View::Add, "ADD GAME"), (View::Supported, "SUPPORTED GAMES"), (View::Request, "REQUEST A GAME"), (View::Friends, "FRIENDS")] {
+                for (view, label) in [(View::Achievements, "MY ACHIEVEMENTS"), (View::Library, "LIBRARY"), (View::Add, "ADD GAME"), (View::Supported, "SUPPORTED GAMES"), (View::Request, "REQUEST A GAME"), (View::Friends, "FRIENDS")] {
                     if blade(ui, label, self.view == view) {
                         self.view = view;
                         self.message = None;
@@ -328,6 +563,20 @@ impl eframe::App for Hub {
         });
 
         egui::CentralPanel::default().frame(egui::Frame::new().fill(BG).inner_margin(egui::Margin::same(20))).show(ui, |ui| {
+            if let Some(v) = self.updated_to.clone() {
+                egui::Frame::new().fill(GREEN.gamma_multiply(0.18)).stroke(Stroke::new(1.0, GREEN)).inner_margin(10).show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(format!("Achievement Hub {v} is installed. Restart to finish updating.")).color(TEXT));
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.button("Restart now").clicked() {
+                                updater::restart();
+                            }
+                        });
+                    });
+                });
+                ui.add_space(12.0);
+            }
             if let Some((msg, good)) = &self.message {
                 let color = if *good { GREEN } else { AMBER };
                 egui::Frame::new().fill(color.gamma_multiply(0.15)).stroke(Stroke::new(1.0, color)).inner_margin(10).show(ui, |ui| {
@@ -342,6 +591,7 @@ impl eframe::App for Hub {
                 View::Supported => self.supported_view(ui),
                 View::Request => self.request_view(ui),
                 View::Friends => self.friends_view(ui),
+                View::Achievements => self.achievements_view(ui),
             }
         });
     }
@@ -693,7 +943,10 @@ impl Hub {
             if let Ok(r) = rx.try_recv() {
                 self.friends_rx = None;
                 match r {
-                    Ok(p) => self.friend_profiles = p,
+                    Ok((p, look)) => {
+                        self.friend_profiles = p;
+                        self.my_look = look;
+                    }
                     Err(e) => self.publish_status = e,
                 }
             }
@@ -750,6 +1003,8 @@ impl Hub {
         egui::Frame::new().fill(PANEL).inner_margin(12).show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
+                let look = self.my_look.clone().unwrap_or_default();
+                self.gamer_pic(ui, &me.gamertag, &look.avatar, &look.color, 32.0);
                 ui.label(RichText::new("Signed in as").color(MUTED));
                 ui.label(RichText::new(&me.gamertag).size(17.0).strong().color(GREEN));
                 ui.hyperlink_to("Your profile", format!("{site}/profile.html?u={}", me.gamertag));
@@ -797,6 +1052,10 @@ impl Hub {
             for p in &list {
                 egui::Frame::new().fill(CARD).inner_margin(12).show(ui, |ui| {
                     ui.set_width(ui.available_width());
+                    ui.horizontal_top(|ui| {
+                    self.gamer_pic(ui, &p.gamertag, &p.avatar, &p.color, 64.0);
+                    ui.add_space(6.0);
+                    ui.vertical(|ui| {
                     ui.horizontal(|ui| {
                         ui.label(RichText::new(if p.online(now) { "●" } else { "○" }).color(if p.online(now) { GREEN } else { MUTED }));
                         ui.label(RichText::new(&p.gamertag).size(17.0).strong().color(Color32::WHITE));
@@ -817,6 +1076,8 @@ impl Hub {
                     for r in p.recent.iter().take(3) {
                         ui.label(RichText::new(format!("{}  -  {} ({} G)", r.title, r.name, r.points)).color(TEXT));
                     }
+                    });
+                    });
                 });
                 ui.add_space(8.0);
             }
@@ -1002,6 +1263,15 @@ fn main() -> eframe::Result {
         }
         return Ok(());
     }
+    // `hub --update-now`: check for an update and install it, then exit.
+    if std::env::args().any(|a| a == "--update-now") {
+        match updater::run() {
+            Some(updater::Outcome::Updated(v)) => println!("updated to {v}"),
+            Some(updater::Outcome::Failed(e)) => println!("{e}"),
+            None => println!("no update (version {}, or not an installed copy)", updater::VERSION),
+        }
+        return Ok(());
+    }
     if std::env::args().any(|a| a == "--profile-json") {
         println!("{}", serde_json::to_string_pretty(&friends::social::snapshot(&library::profile_dir(), None)).unwrap_or_default());
         return Ok(());
@@ -1016,7 +1286,12 @@ fn main() -> eframe::Result {
                     Err(e) => println!("publish: {e}"),
                 }
                 match friends::fetch(&s) {
-                    Ok(f) => println!("friends: {}", f.iter().map(|p| format!("{} ({} G)", p.gamertag, p.gamerscore)).collect::<Vec<_>>().join(", ")),
+                    Ok(f) => {
+                        println!("friends: {}", f.0.iter().map(|p| format!("{} ({} G)", p.gamertag, p.gamerscore)).collect::<Vec<_>>().join(", "));
+                        for p in f.0.iter().filter(|p| p.avatar.starts_with("img:")) {
+                            println!("picture: {} {}", p.gamertag, if friends::picture(&p.gamertag, &p.avatar).is_some() { "loaded" } else { "failed" });
+                        }
+                    }
                     Err(e) => println!("friends: {e}"),
                 }
             }

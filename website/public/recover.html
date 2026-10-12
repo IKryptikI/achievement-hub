@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Reset your password · Achievement Hub</title>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
+<script>
+try{document.documentElement.dataset.theme=localStorage.getItem("ah-theme")||"dark"}catch(e){}</script>
 <meta property="og:site_name" content="Achievement Hub">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Reset your password · Achievement Hub">
@@ -18,7 +19,14 @@
 <body>
 <main><section><div class="wrap card reveal" style="max-width:520px">
   <h1>Forgot your password?</h1>
-  <p class="muted">Use the recovery code you saved when you signed up.</p>
+  <form id="ef" class="card" hidden style="margin-bottom:22px">
+    <h3 style="margin-top:0">Email me a reset link</h3>
+    <label for="em" style="margin-top:0">Your account's email</label><input id="em" type="email" required autocomplete="email">
+    <div class="human" id="human"></div>
+    <div id="emsg"></div>
+    <p style="margin-bottom:0"><button class="btn primary">Send the link</button></p>
+  </form>
+  <p class="muted" id="orcode">Or use the recovery code you saved when you signed up.</p>
   <form id="f">
     <label for="gt">Gamertag</label><input id="gt" required autocomplete="username">
     <label for="rc">Recovery code</label><input id="rc" required placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off">
@@ -32,6 +40,16 @@
   </div>
 </div></section></main>
 <script>
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!(await siteConfig()).email) return ($('#orcode').textContent = 'Use the recovery code you saved when you signed up.');
+  $('#ef').hidden = false;
+  const check = await humanCheck($('#human'));
+  $('#ef').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try { await api('/forgot', { method: 'POST', body: { email: $('#em').value, turnstile: check.token() } }); note($('#emsg'), 'If that email has an account, a reset link is on its way. Check your inbox (and spam).', true); }
+    catch (err) { note($('#emsg'), err.message); check.reset(); }
+  });
+});
 document.addEventListener('DOMContentLoaded', () => {
   passwordField($('#pw')); strengthMeter($('#pw'));
   $('#f').addEventListener('submit', async (e) => {

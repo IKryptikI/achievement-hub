@@ -80,8 +80,22 @@ pub fn publish(s: &Social) -> Result<String, String> {
     Ok(v["gamertag"].as_str().unwrap_or(&s.gamertag).to_string())
 }
 
-/// Friends' profiles.
-pub fn fetch(s: &Social) -> Result<Vec<Profile>, String> {
+/// Friends' profiles, and your own look (gamer picture etc.).
+pub fn fetch(s: &Social) -> Result<(Vec<Profile>, Option<social::Look>), String> {
     let resp = agent().get(&social::friends_url()).header("Authorization", &format!("Bearer {}", s.token)).call().map_err(|e| format!("{OFFLINE}: {e}"))?;
-    Ok(social::parse_friends(&read(resp)?))
+    let body = read(resp)?;
+    Ok((social::parse_friends(&body), social::parse_me(&body)))
+}
+
+/// A player's uploaded gamer picture, from the shared cache (downloading it
+/// the first time), ready to show. None if they have none.
+pub fn picture(gamertag: &str, avatar: &str) -> Option<eframe::egui::ColorImage> {
+    let (path, url) = social::picture(&profile_dir(), gamertag, avatar)?;
+    if !path.exists() {
+        let mut resp = agent().get(&url).call().ok()?;
+        let bytes = resp.body_mut().with_config().limit(1 << 20).read_to_vec().ok()?;
+        social::save_picture(&path, &bytes).ok()?;
+    }
+    let img = image::open(&path).ok()?.resize_to_fill(96, 96, image::imageops::FilterType::Triangle).into_rgba8();
+    Some(eframe::egui::ColorImage::from_rgba_unmultiplied([96, 96], img.as_raw()))
 }

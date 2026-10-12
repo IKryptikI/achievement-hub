@@ -21,6 +21,7 @@
 import { community, rateLimit, badges } from './_community.js';
 import { forum } from './_forum.js';
 import { badGamertag, badText } from './_filter.js';
+import { config, human, NOT_HUMAN, badEmail, sendMail, sendVerification, checkCode, newResetToken, useResetToken, mayPost } from './_protect.js';
 
 const SESSION_DAYS = 30;
 const PBKDF2_ITERATIONS = 60000;
@@ -62,7 +63,7 @@ async function currentUser(env, req) {
   const token = cookie(req, 'ah_session');
   if (!token) return null;
   return env.DB.prepare(
-    'SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires > ?',
+    'SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires > ? AND u.banned = 0',
   ).bind(await sha256(token), now()).first();
 }
 
@@ -70,7 +71,7 @@ async function appUser(env, req) {
   const m = (req.headers.get('authorization') || '').match(/^Bearer (.+)$/);
   if (!m) return null;
   const hash = await sha256(m[1]);
-  const user = await env.DB.prepare('SELECT u.* FROM app_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ?')
+  const user = await env.DB.prepare('SELECT u.* FROM app_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ? AND u.banned = 0')
     .bind(hash).first();
   if (user) await env.DB.prepare('UPDATE app_tokens SET last_used = ? WHERE token_hash = ?').bind(now(), hash).run();
   return user;
@@ -190,21 +191,26 @@ export async function onRequest({ request: req, env, params }) {
   try {
     // ── Accounts ──
     if (route === '/signup' && method === 'POST') {
-      const { gamertag = '', password = '', email = '', website = '' } = await body(req);
+      const { gamertag = '', password = '', email: rawEmail = '', website = '', turnstile = '' } = await body(req);
       if (website) return fail(400, 'Something went wrong.'); // the hidden trap field
       if (!(await rateLimit(env, req, 'signup', 5, 3600))) return fail(429, 'Too many sign-ups from here. Try again in an hour.');
+      if (!(await human(env, req, turnstile))) return fail(400, NOT_HUMAN);
+      const email = String(rawEmail).trim().toLowerCase();
       if (!GAMERTAG.test(gamertag)) return fail(400, 'Gamertags are 3-16 letters, numbers, spaces, - or _.');
       const bad = badGamertag(gamertag);
       if (bad) return fail(400, bad);
       if (password.length < 8) return fail(400, 'Passwords need at least 8 characters.');
-      if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(400, "That email doesn't look right.");
+      const badMail = badEmail(email);
+      if (badMail) return fail(400, badMail);
+      if (await env.DB.prepare('SELECT 1 FROM users WHERE email = ?').bind(email).first()) return fail(409, 'That email already has an account. Log in, or reset your password.');
       if (await env.DB.prepare('SELECT 1 FROM users WHERE gamertag = ?').bind(gamertag.trim()).first())
         return fail(409, 'That gamertag is taken.');
       const salt = randomToken(16);
       const r = await env.DB.prepare(
         'INSERT INTO users (gamertag, email, pass_hash, pass_salt, created, avatar) VALUES (?, ?, ?, ?, ?, ?)',
-      ).bind(gamertag.trim(), email || null, await hashPassword(password, salt), salt, now(), gamertag.trim()[0].toUpperCase()).run();
+      ).bind(gamertag.trim(), email, await hashPassword(password, salt), salt, now(), gamertag.trim()[0].toUpperCase()).run();
       const recovery_code = await newRecovery(env, r.meta.last_row_id);
+      if (config(env).email) await sendVerification(env, { id: r.meta.last_row_id, gamertag: gamertag.trim() }, email);
       return json({ ok: true, recovery_code }, 201, { 'set-cookie': await startSession(env, r.meta.last_row_id) });
     }
 
@@ -225,6 +231,7 @@ export async function onRequest({ request: req, env, params }) {
       const { gamertag = '', password = '' } = await body(req);
       const u = await env.DB.prepare('SELECT * FROM users WHERE gamertag = ? OR email = ?').bind(gamertag.trim(), gamertag.trim()).first();
       if (!u || (await hashPassword(password, u.pass_salt)) !== u.pass_hash) return fail(401, 'Wrong gamertag or password.');
+      if (u.banned) return fail(403, `This account is banned${u.ban_reason ? ': ' + u.ban_reason : '.'}`);
       return json({ ok: true }, 200, { 'set-cookie': await startSession(env, u.id) });
     }
 
@@ -232,6 +239,70 @@ export async function onRequest({ request: req, env, params }) {
       const token = cookie(req, 'ah_session');
       if (token) await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await sha256(token)).run();
       return json({ ok: true }, 200, { 'set-cookie': sessionCookie('', 0) });
+    }
+
+    if (route === '/config' && method === 'GET') return json(config(env), 200, { 'cache-control': 'public, max-age=300' });
+
+    // ── Forgot password, by email ──
+    if (route === '/forgot' && method === 'POST') {
+      if (!config(env).email) return fail(503, "Email isn't set up yet. Use your recovery code instead.");
+      if (!(await rateLimit(env, req, 'forgot', 5, 3600))) return fail(429, 'Too many tries. Wait an hour and try again.');
+      const { email = '', turnstile = '' } = await body(req);
+      if (!(await human(env, req, turnstile))) return fail(400, NOT_HUMAN);
+      const u = await env.DB.prepare('SELECT id, gamertag, email FROM users WHERE email = ? AND banned = 0').bind(String(email).trim().toLowerCase()).first();
+      if (u) {
+        const token = await newResetToken(env, u.id);
+        await sendMail(env, u.email, 'Reset your Achievement Hub password',
+          `Hi ${u.gamertag},\n\nSomeone (hopefully you) asked to reset your Achievement Hub password. Set a new one here (the link works for an hour):\n\n${new URL(req.url).origin}/reset?t=${token}\n\nIf it wasn't you, ignore this email; your password hasn't changed.\n`);
+      }
+      // (The same answer either way, so this can't be used to find accounts.)
+      return json({ ok: true });
+    }
+    if (route === '/reset' && method === 'POST') {
+      if (!(await rateLimit(env, req, 'reset', 10, 3600))) return fail(429, 'Too many tries. Wait an hour and try again.');
+      const { token = '', new_password = '' } = await body(req);
+      if (new_password.length < 8) return fail(400, 'Passwords need at least 8 characters.');
+      const id = await useResetToken(env, token);
+      if (!id) return fail(403, 'That link has expired or was already used. Ask for a new one.');
+      await setPassword(env, id, new_password);
+      // (They clicked a link sent to their inbox: that proves the address.)
+      await env.DB.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').bind(id).run();
+      return json({ ok: true }, 200, { 'set-cookie': await startSession(env, id) });
+    }
+
+    // ── Your email: change it, verify it ──
+    if (route === '/me/email' && method === 'POST') {
+      const u = await currentUser(env, req);
+      if (!u) return fail(401, 'Not logged in.');
+      const { email: raw = '', password = '' } = await body(req);
+      if ((await hashPassword(password, u.pass_salt)) !== u.pass_hash) return fail(403, 'Your password is wrong.');
+      const email = String(raw).trim().toLowerCase();
+      const bad = badEmail(email);
+      if (bad) return fail(400, bad);
+      if (await env.DB.prepare('SELECT 1 FROM users WHERE email = ? AND id != ?').bind(email, u.id).first()) return fail(409, 'Another account uses that email.');
+      await env.DB.prepare('UPDATE users SET email = ?, email_verified = 0 WHERE id = ?').bind(email, u.id).run();
+      if (config(env).email) {
+        if (!(await rateLimit(env, req, 'verify-send', 6, 3600))) return fail(429, 'Saved, but too many emails sent this hour. Ask for a code later.');
+        const err = await sendVerification(env, u, email);
+        if (err) return fail(502, err);
+      }
+      return json({ ok: true });
+    }
+    if (route === '/me/verify' && method === 'POST') {
+      const u = await currentUser(env, req);
+      if (!u) return fail(401, 'Not logged in.');
+      if (!(await rateLimit(env, req, 'verify', 10, 900))) return fail(429, 'Too many tries. Wait 15 minutes.');
+      if (!(await checkCode(env, u, (await body(req)).code))) return fail(400, "That code didn't work. Check the latest email, or send a new one.");
+      await env.DB.prepare("UPDATE users SET email_verified = 1, email_code_hash = '' WHERE id = ?").bind(u.id).run();
+      return json({ ok: true });
+    }
+    if (route === '/me/verify/resend' && method === 'POST') {
+      const u = await currentUser(env, req);
+      if (!u) return fail(401, 'Not logged in.');
+      if (!u.email) return fail(400, 'Add an email address first.');
+      if (!(await rateLimit(env, req, 'verify-send', 6, 3600))) return fail(429, 'Too many emails this hour. Try again later.');
+      const err = await sendVerification(env, u, u.email);
+      return err ? fail(502, err) : json({ ok: true });
     }
 
     if (route === '/me/recovery' && method === 'POST') {
@@ -268,6 +339,8 @@ export async function onRequest({ request: req, env, params }) {
         ]);
         return json({ ok: true });
       }
+      const no = await mayPost(env, u);
+      if (no) return fail(403, no);
       if (!(await rateLimit(env, req, 'picture', 30, 86400))) return fail(429, "That's a lot of new pictures today. Try again tomorrow.");
       const img = await req.arrayBuffer();
       const type = imageType(img);
@@ -299,13 +372,17 @@ export async function onRequest({ request: req, env, params }) {
         const progress = await env.DB.prepare('SELECT * FROM progress WHERE user_id = ?').bind(u.id).first();
         const apps = await env.DB.prepare('SELECT COUNT(*) AS n FROM app_tokens WHERE user_id = ?').bind(u.id).first();
         const card = await env.DB.prepare('SELECT updated FROM gamercards WHERE user_id = ?').bind(u.id).first();
-        return json({ ...publicProfile(u, progress, true), email: u.email, apps_linked: apps.n, is_admin: !!u.is_admin, card_updated: card ? card.updated : 0, achievements: await badges(env, u) });
+        return json({ ...publicProfile(u, progress, true), email: u.email, apps_linked: apps.n, is_admin: !!u.is_admin, card_updated: card ? card.updated : 0, achievements: await badges(env, u), email_verified: !!u.email_verified, created: u.created });
       }
       if (method === 'PATCH') {
         const b = await body(req);
         const set = {};
         const rude = badText(b.bio, b.motto);
         if (rude) return fail(400, rude);
+        if (b.bio || b.motto) {
+          const no = await mayPost(env, u, [b.bio, b.motto]);
+          if (no && !no.startsWith('Verify')) return fail(403, no);
+        }
         if (b.bio !== undefined) set.bio = String(b.bio).slice(0, 400);
         if (b.motto !== undefined) set.motto = String(b.motto).slice(0, 60);
         if (b.avatar !== undefined) {
@@ -355,7 +432,7 @@ export async function onRequest({ request: req, env, params }) {
     }
 
     // ── Profiles ──
-    if (parts[0] === 'users' && parts[1] && method === 'GET') {
+    if (parts[0] === 'users' && parts.length === 2 && method === 'GET') {
       const u = await env.DB.prepare('SELECT * FROM users WHERE gamertag = ?').bind(decodeURIComponent(parts[1])).first();
       if (!u) return fail(404, 'No such gamertag.');
       const viewer = await currentUser(env, req);
@@ -363,6 +440,7 @@ export async function onRequest({ request: req, env, params }) {
       const friend = await areFriends(env, viewer && viewer.id, u.id);
       const p = publicProfile(u, progress, !u.private || friend);
       p.badges = await badges(env, u);
+      if (viewer && viewer.is_admin) p.banned = !!u.banned;
       if (viewer && viewer.id !== u.id) {
         const f = await env.DB.prepare(
           'SELECT requester, status FROM friends WHERE (requester = ? AND addressee = ?) OR (requester = ? AND addressee = ?)',
@@ -370,6 +448,16 @@ export async function onRequest({ request: req, env, params }) {
         p.relation = !f ? 'none' : f.status === 'accepted' ? 'friend' : f.requester === viewer.id ? 'sent' : 'received';
       } else if (viewer) p.relation = 'self';
       return json(p);
+    }
+
+    if (parts[0] === 'users' && parts[1] && parts[2] === 'timeline' && method === 'GET') {
+      // Every unlock with its date, newest first (same privacy as the profile).
+      const u = await env.DB.prepare('SELECT id, private FROM users WHERE gamertag = ?').bind(decodeURIComponent(parts[1])).first();
+      if (!u) return fail(404, 'No such gamertag.');
+      const viewer = await currentUser(env, req);
+      if (u.private && !(await areFriends(env, viewer && viewer.id, u.id))) return fail(403, 'Only friends can see this.');
+      const { results } = await env.DB.prepare('SELECT game, achievement, time FROM player_unlocks WHERE user_id = ? ORDER BY time DESC LIMIT 2000').bind(u.id).all();
+      return json({ unlocks: results });
     }
 
     if (route === '/leaderboard' && method === 'GET') {
@@ -385,6 +473,9 @@ export async function onRequest({ request: req, env, params }) {
       if (!u) return fail(401, 'Not logged in.');
       if (parts.length === 1 && method === 'GET') return json({ friends: await friendList(env, u.id) });
       if (parts.length === 1 && method === 'POST') {
+        const no = await mayPost(env, u);
+        if (no) return fail(403, no);
+        if (!(await rateLimit(env, req, 'friend', 40, 86400))) return fail(429, "That's a lot of friend requests for one day.");
         const { gamertag = '' } = await body(req);
         const other = await env.DB.prepare('SELECT id FROM users WHERE gamertag = ?').bind(gamertag.trim()).first();
         if (!other) return fail(404, 'No such gamertag.');
@@ -455,8 +546,10 @@ export async function onRequest({ request: req, env, params }) {
         // Unlocked achievement ids, kept separately (game pages count them).
         const rows = [];
         for (const g of games) {
-          for (const id of Array.isArray(g.ids) ? g.ids.slice(0, 500) : []) rows.push([String(g.id).slice(0, 80), String(id).slice(0, 80)]);
+          const times = Array.isArray(g.times) ? g.times : [];
+          (Array.isArray(g.ids) ? g.ids.slice(0, 500) : []).forEach((id, i) => rows.push([String(g.id).slice(0, 80), String(id).slice(0, 80), Math.max(0, Number(times[i]) || 0)]));
           delete g.ids;
+          delete g.times;
         }
         // Per-game points for leaderboards.
         const per = games.map((g) => [String(g.id).slice(0, 80), Number(g.points) || 0, Number(g.unlocked) || 0, Number(g.total) || 0]);
@@ -468,7 +561,7 @@ export async function onRequest({ request: req, env, params }) {
           ).bind(u.id, JSON.stringify(per)),
           env.DB.prepare('DELETE FROM player_unlocks WHERE user_id = ?').bind(u.id),
           env.DB.prepare(
-            "INSERT OR IGNORE INTO player_unlocks (user_id, game, achievement) SELECT ?, json_extract(value, '$[0]'), json_extract(value, '$[1]') FROM json_each(?)",
+            "INSERT OR IGNORE INTO player_unlocks (user_id, game, achievement, time) SELECT ?, json_extract(value, '$[0]'), json_extract(value, '$[1]'), json_extract(value, '$[2]') FROM json_each(?)",
           ).bind(u.id, JSON.stringify(rows.slice(0, 5000))),
         ]);
         const snapshot = JSON.stringify({

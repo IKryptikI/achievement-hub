@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <span class="gs pts">${a.points}</span>
         ${open.has(a.id) ? `<div class="tips" style="flex-basis:100%">${tips.map((t) => `<div class="tip">${pic({ avatar: t.avatar, color: t.color, gamertag: t.by }, true)}
             <div style="flex:1"><b>${esc(t.by)}</b> <span class="muted" style="font-size:.85rem">${new Date(t.created * 1000).toLocaleDateString()}</span><p>${esc(t.body)}</p></div>
-            <button class="btn small${t.mine ? ' primary' : ''}" data-gvote="${t.id}">▲ ${t.votes}</button></div>`).join('')}
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><button class="btn small${t.mine ? ' primary' : ''}" data-gvote="${t.id}">▲ ${t.votes}</button><button class="report-link" data-tipreport="${t.id}">Report</button></div></div>`).join('')}
           ${viewer ? `<form data-tipform="${esc(a.id)}" style="margin-top:8px"><textarea rows="2" maxlength="2000" placeholder="How did you get it? Share a tip…"></textarea><p style="margin:8px 0 0"><button class="btn small primary">Post tip</button></p></form>`
             : `<p class="muted" style="margin:6px 0 0"><a href="login.html?next=${encodeURIComponent(location.pathname + location.search)}">Log in</a> to add a tip.</p>`}</div>` : ''}
       </div>`;
@@ -152,6 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (d.v) { view = d.v; drawViews(); }
     if (d.reveal) { revealed.add(d.reveal); drawList(); }
     if (d.tips) { e.preventDefault(); open.has(d.tips) ? open.delete(d.tips) : open.add(d.tips); drawList(); }
+    if (d.tipreport) return report('tip', d.tipreport);
     if (d.gvote) { try { await api(`/guides/${d.gvote}/vote`, { method: 'POST' }); guides = (await api(`/games/${encodeURIComponent(id)}/guides`)).guides; drawList(); } catch {} }
   });
   document.addEventListener('submit', async (e) => {

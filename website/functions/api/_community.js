@@ -12,6 +12,7 @@
 //            PATCH /api/admin/requests/:id {status}   POST /api/admin/news   DELETE /api/admin/news/:id
 
 import { badText } from './_filter.js';
+import { human, NOT_HUMAN, sendMail, mayPost } from './_protect.js';
 
 const STATUSES = { mapper: ['new', 'contacted', 'accepted', 'declined'], request: ['open', 'planned', 'added', 'declined'] };
 const clip = (s, n) => String(s ?? '').trim().slice(0, n);
@@ -92,6 +93,7 @@ export async function community(c) {
     if (b.website) return json({ ok: true }); // the hidden trap field: a bot filled it in
     if (!(await rateLimit(env, req, 'mapper', 3, 86400))) return fail(429, "You've sent a few already today. We'll be in touch!");
     if (!b.consent) return fail(400, 'Please tick the box agreeing to be contacted.');
+    if (!(await human(env, req, b.turnstile))) return fail(400, NOT_HUMAN);
     const name = clip(b.name, 80), email = clip(b.email, 120);
     if (!name) return fail(400, 'Please tell us your name.');
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(400, "That email doesn't look right.");
@@ -99,6 +101,15 @@ export async function community(c) {
     await env.DB.prepare(
       'INSERT INTO mapper_applications (user_id, name, email, discord, platform, games, experience, hours, notes, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(u ? u.id : null, name, email, clip(b.discord, 60), clip(b.platform, 40), clip(b.games, 600), clip(b.experience, 1000), clip(b.hours, 60), clip(b.notes, 1000), now()).run();
+    // Automatic emails (once email is set up): a thank-you to them, the details to the admin.
+    await sendMail(env, email, 'Thanks for offering to map achievements!',
+      `Hi ${name},\n\nThanks for applying to help map achievements for Achievement Hub. We'll look at your application and get back to you at this address${b.discord ? ' or on Discord' : ''}.\n\nThe Achievement Hub team\n`);
+    if (env.ADMIN_EMAIL) {
+      await sendMail(env, env.ADMIN_EMAIL, `New mapper application: ${name}`,
+        [`Name: ${name}`, `Email: ${email}`, `Discord: ${clip(b.discord, 60)}`, `Gamertag: ${u ? u.gamertag : '-'}`, `Platform: ${clip(b.platform, 40)}`,
+          `Games: ${clip(b.games, 600)}`, `Experience: ${clip(b.experience, 1000)}`, `Hours: ${clip(b.hours, 60)}`, `Notes: ${clip(b.notes, 1000)}`,
+          '', `Review it: ${new URL(req.url).origin}/admin`].join('\n'));
+    }
     return json({ ok: true }, 201);
   }
 
@@ -118,6 +129,9 @@ export async function community(c) {
     if (parts.length === 1 && method === 'POST') {
       const b = await body(req);
       if (b.website) return json({ ok: true });
+      const no = await mayPost(env, u, [b.title, b.notes]);
+      if (no) return fail(403, no);
+      if (!(await human(env, req, b.turnstile))) return fail(400, NOT_HUMAN);
       if (!(await rateLimit(env, req, 'request', 10, 86400))) return fail(429, "That's plenty of requests for today.");
       const title = clip(b.title, 120);
       if (title.length < 2) return fail(400, 'Which game?');
@@ -157,6 +171,8 @@ export async function community(c) {
       const text = clip(b.body, 2000);
       if (text.length < 10) return fail(400, 'Write a little more (10+ characters).');
       if (badText(text)) return fail(400, badText(text));
+      const no = await mayPost(env, u, [text], ['guides', 'body']);
+      if (no) return fail(403, no);
       await env.DB.prepare('INSERT INTO guides (game, achievement, user_id, body, created) VALUES (?, ?, ?, ?, ?)')
         .bind(game, clip(b.achievement, 80), u.id, text, now()).run();
       return json({ ok: true }, 201);
@@ -257,6 +273,18 @@ export async function community(c) {
     return json({ unlocks: results });
   }
 
+  // ── Reports: anyone logged in can flag something for the admin ──
+  if (route === '/reports' && method === 'POST') {
+    const u = await currentUser(env, req);
+    if (!u) return fail(401, 'Log in to report something.');
+    if (!(await rateLimit(env, req, 'report', 30, 86400))) return fail(429, "That's a lot of reports today. Thanks, we'll get to them!");
+    const b = await body(req);
+    if (!['post', 'thread', 'tip', 'user'].includes(b.kind)) return fail(400, 'Report what?');
+    await env.DB.prepare('INSERT OR IGNORE INTO reports (kind, target, reason, reporter_id, created) VALUES (?, ?, ?, ?, ?)')
+      .bind(b.kind, clip(b.target, 80), clip(b.reason, 500) || '(no reason given)', u.id, now()).run();
+    return json({ ok: true });
+  }
+
   // ── News ──
   if (route === '/news' && method === 'GET') {
     const { results } = await env.DB.prepare('SELECT id, title, body, created FROM news ORDER BY created DESC LIMIT 30').all();
@@ -272,7 +300,7 @@ export async function community(c) {
         'SELECT m.*, us.gamertag FROM mapper_applications m LEFT JOIN users us ON us.id = m.user_id ORDER BY m.status = \'new\' DESC, m.created DESC',
       ).all()).results;
       const counts = await env.DB.prepare(
-        'SELECT (SELECT COUNT(*) FROM users) AS users, (SELECT COUNT(*) FROM progress) AS linked, (SELECT COUNT(*) FROM game_requests WHERE status = \'open\') AS requests, (SELECT COUNT(*) FROM guides) AS guides',
+        'SELECT (SELECT COUNT(*) FROM users) AS users, (SELECT COUNT(*) FROM progress) AS linked, (SELECT COUNT(*) FROM game_requests WHERE status = \'open\') AS requests, (SELECT COUNT(*) FROM guides) AS guides, (SELECT COUNT(*) FROM reports WHERE status = \'open\') AS reports',
       ).first();
       return json({ mappers, counts });
     }
@@ -296,6 +324,38 @@ export async function community(c) {
       const { status } = await body(req);
       if (!['new', 'merged', 'rejected'].includes(status)) return fail(400, 'Bad status.');
       await env.DB.prepare('UPDATE shared_mappings SET status = ? WHERE id = ?').bind(status, Number(parts[2])).run();
+      return json({ ok: true });
+    }
+    if (route === '/admin/reports' && method === 'GET') {
+      const { results } = await env.DB.prepare(
+        `SELECT r.*, us.gamertag AS reporter FROM reports r LEFT JOIN users us ON us.id = r.reporter_id
+          ORDER BY r.status = 'open' DESC, r.created DESC LIMIT 300`,
+      ).all();
+      // What was reported, so it can be judged right here.
+      for (const r of results) {
+        if (r.kind === 'post') r.content = await env.DB.prepare('SELECT p.body, p.thread_id, us.gamertag FROM forum_posts p LEFT JOIN users us ON us.id = p.user_id WHERE p.id = ?').bind(Number(r.target)).first();
+        if (r.kind === 'thread') r.content = await env.DB.prepare('SELECT t.title AS body, t.id AS thread_id, us.gamertag FROM forum_threads t LEFT JOIN users us ON us.id = t.user_id WHERE t.id = ?').bind(Number(r.target)).first();
+        if (r.kind === 'tip') r.content = await env.DB.prepare('SELECT g.body, g.game, us.gamertag FROM guides g LEFT JOIN users us ON us.id = g.user_id WHERE g.id = ?').bind(Number(r.target)).first();
+        if (r.kind === 'user') r.content = await env.DB.prepare('SELECT gamertag, motto AS body, banned FROM users WHERE gamertag = ?').bind(r.target).first();
+      }
+      return json({ reports: results });
+    }
+    if (parts[1] === 'reports' && parts[2] && method === 'PATCH') {
+      const { status } = await body(req);
+      if (!['open', 'done', 'dismissed'].includes(status)) return fail(400, 'Bad status.');
+      await env.DB.prepare('UPDATE reports SET status = ? WHERE id = ?').bind(status, Number(parts[2])).run();
+      return json({ ok: true });
+    }
+    if (parts[1] === 'users' && parts[2] && parts[3] === 'ban' && method === 'POST') {
+      const who = await env.DB.prepare('SELECT id, is_admin FROM users WHERE gamertag = ?').bind(decodeURIComponent(parts[2])).first();
+      if (!who) return fail(404, 'No such gamertag.');
+      if (who.is_admin) return fail(400, "Admins can't be banned.");
+      const { banned = true, reason = '' } = await body(req);
+      await env.DB.batch([
+        env.DB.prepare('UPDATE users SET banned = ?, ban_reason = ? WHERE id = ?').bind(banned ? 1 : 0, clip(reason, 200), who.id),
+        // Logged out everywhere, app unlinked.
+        ...(banned ? [env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(who.id), env.DB.prepare('DELETE FROM app_tokens WHERE user_id = ?').bind(who.id)] : []),
+      ]);
       return json({ ok: true });
     }
     if (parts[1] === 'users' && parts[2] && parts[3] === 'picture' && method === 'DELETE') {

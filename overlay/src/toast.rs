@@ -10,6 +10,9 @@ use hudhook::imgui::Ui;
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
+/// Pop-ups at the top of the screen instead of the bottom (Settings).
+pub static POPUPS_TOP: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 const SHOW_FOR: Duration = Duration::from_secs(6);
 const FADE: f32 = 0.35; // seconds of fade in / out
 const HEIGHT: f32 = 76.0;
@@ -108,7 +111,11 @@ impl Toasts {
             )
             .build(|| {
                 panel_window(ui);
-            let min = [(dw - width) / 2.0, dh - MARGIN - HEIGHT + rise];
+            let min = if POPUPS_TOP.load(std::sync::atomic::Ordering::Relaxed) {
+                [(dw - width) / 2.0, MARGIN - rise]
+            } else {
+                [(dw - width) / 2.0, dh - MARGIN - HEIGHT + rise]
+            };
             let max = [min[0] + width, min[1] + HEIGHT];
             let dl = ui.get_window_draw_list();
             let a = |c: [f32; 4]| with_alpha(c, alpha);

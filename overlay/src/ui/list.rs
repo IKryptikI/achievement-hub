@@ -10,6 +10,7 @@ use super::theme::p as pal;
 use crate::media::{Kind, Media};
 use crate::profile::{format_ago, format_date, GameSummary, Profile};
 use crate::Fonts;
+use std::collections::HashMap;
 use hudhook::imgui::Ui;
 
 /// Achievement list filter.
@@ -79,7 +80,8 @@ impl AchList {
         }
     }
 
-    pub fn draw(&mut self, ui: &Ui, fonts: &Fonts, media: &Media, game: &GameSummary, profile: &Profile, title: &str) {
+    pub fn draw(&mut self, ui: &Ui, fonts: &Fonts, media: &Media, game: &GameSummary, profile: &Profile, title: &str, counts: Option<&HashMap<String, (i64, i64)>>) {
+        let progress_of = |id: &str| counts.and_then(|p| p.get(id)).copied().filter(|(n, t)| *t > 0 && n < t);
         self.anim.begin(ui.io().delta_time);
         let all = &game.achievement;
         let unlocked_at = |id: &str| profile.unlocked_at(&game.id, id);
@@ -203,6 +205,7 @@ impl AchList {
                         let text_w = width - 68.0 - 84.0;
                         let name = if hidden { "Secret achievement" } else { a.name.as_str() };
                         let line = if hidden { "Keep playing to reveal this one." } else { a.description.as_str() };
+                        let counting = if unlocked.is_none() { progress_of(&a.id) } else { None };
                         let (c1, c2) = match unlocked {
                             Some(_) => (lerp_color(pal().text, pal().on_sel, sel), lerp_color(pal().soft, pal().on_sel_soft, sel)),
                             None => (lerp_color(pal().soft, pal().on_sel, sel), lerp_color(pal().faint, pal().on_sel_soft, sel)),
@@ -214,8 +217,18 @@ impl AchList {
                         }
                         {
                             let _f = ui.push_font(fonts.body);
+                            // Counting: "54 / 300" at the end of the line and a thin bar under it.
+                            let count = counting.map(|(n, t)| format!("{n} / {t}"));
+                            let count_w = count.as_ref().map_or(0.0, |c| ui.calc_text_size(c)[0] + 12.0);
                             ui.set_cursor_screen_pos([tx, top[1] + 33.0]);
-                            ui.text_colored(c2, fit(ui, line, text_w));
+                            ui.text_colored(c2, fit(ui, line, text_w - count_w));
+                            if let (Some(c), Some((n, t))) = (count, counting) {
+                                let dl = ui.get_window_draw_list();
+                                dl.add_text([tx + text_w - count_w + 12.0, top[1] + 33.0], col(c1), &c);
+                                let (b0, b1) = ([tx, top[1] + row_h - 7.0], [tx + text_w, top[1] + row_h - 4.0]);
+                                dl.add_rect(b0, b1, with_alpha(pal().text, 0.15)).filled(true).rounding(1.5).build();
+                                dl.add_rect(b0, [b0[0] + (b1[0] - b0[0]) * n as f32 / t as f32, b1[1]], pal().accent).filled(true).rounding(1.5).build();
+                            }
                         }
                         points_pill(ui, fonts, max[0] - 10.0, top[1] + row_h / 2.0, a.points, unlocked.is_some(), sel > 0.5);
                     });
@@ -288,6 +301,17 @@ impl AchList {
                         Some(t) => ui.text_colored(pal().soft, format!("Unlocked {}  ·  {}", format_date(t), format_ago(t))),
                         None => ui.text_colored(pal().faint, "Locked"),
                     }
+                    if let Some((n, t)) = when.is_none().then(|| progress_of(&a.id)).flatten() {
+                        // Counting: how far along, with a bar.
+                        ui.set_cursor_screen_pos([p[0] + 16.0, ui.cursor_screen_pos()[1] + 4.0]);
+                        ui.text_colored(pal().text, format!("Progress: {n} / {t}  ({}%)", n * 100 / t));
+                        let y = ui.cursor_screen_pos()[1] + 2.0;
+                        let (b0, b1) = ([p[0] + 16.0, y], [p[0] + full[0] - 16.0, y + 6.0]);
+                        let dl = ui.get_window_draw_list();
+                        dl.add_rect(b0, b1, with_alpha(pal().text, 0.15)).filled(true).rounding(3.0).build();
+                        dl.add_rect(b0, [b0[0] + (b1[0] - b0[0]) * n as f32 / t as f32, b1[1]], pal().accent).filled(true).rounding(3.0).build();
+                        ui.dummy([0.0, 12.0]);
+                    }
                     let learned = crate::recorder::status(&game.id, &a.id);
                     let recording = crate::recorder::watching(&game.id);
                     let note = match learned {
@@ -309,7 +333,7 @@ impl AchList {
                     if let (Some(_), Some((tex, [iw, ih]))) = (when, media.get(Kind::Shot, &game.id, &a.id)) {
                         ui.dummy([0.0, 8.0]);
                         let w = full[0] - 32.0;
-                        let h = (w * ih / iw.max(1.0)).min(p[1] + full[1] - ui.cursor_screen_pos()[1] - 40.0).max(0.0);
+                        let h = (w * ih / iw.max(1.0)).min(p[1] + full[1] - ui.cursor_screen_pos()[1] - 56.0).max(0.0);
                         let w = if iw > 0.0 { w.min(h * iw / ih.max(1.0)) } else { w };
                         let pos = [p[0] + 16.0, ui.cursor_screen_pos()[1]];
                         {

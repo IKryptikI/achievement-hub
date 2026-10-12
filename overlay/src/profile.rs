@@ -95,6 +95,36 @@ struct ProfileFile {
     /// picked in the overlay).
     #[serde(default, skip_serializing_if = "String::is_empty")]
     avatar: String,
+    /// Overlay settings (changed in the overlay's Settings screen).
+    #[serde(default, skip_serializing_if = "Settings::is_default")]
+    settings: Settings,
+}
+
+/// Overlay settings, shared by every game.
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[serde(default)]
+pub struct Settings {
+    pub sounds: bool,
+    /// Sound volume, percent (25, 50, 75 or 100).
+    pub volume: u8,
+    /// Where pop-ups appear: "bottom" or "top".
+    pub popups: String,
+    /// Save a screenshot when an achievement unlocks.
+    pub screenshots: bool,
+    /// The panel's keyboard shortcut ("" = the game's ini, else Shift+F2).
+    pub hotkey: String,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings { sounds: true, volume: 100, popups: "bottom".into(), screenshots: true, hotkey: String::new() }
+    }
+}
+
+impl Settings {
+    fn is_default(&self) -> bool {
+        *self == Settings::default()
+    }
 }
 
 pub struct Profile {
@@ -106,6 +136,7 @@ pub struct Profile {
     pub mapper: bool,
     /// Gamer picture (see ProfileFile::avatar).
     pub avatar: String,
+    pub settings: Settings,
     /// (game, achievement) -> unlock time.
     unlocked: HashMap<(String, String), u64>,
     pub games: HashMap<String, GameSummary>,
@@ -143,11 +174,11 @@ impl Profile {
         log(&format!("profile: {}", dir.display()));
 
         let file = fs::read_to_string(dir.join("profile.toml")).ok().and_then(|t| toml::from_str::<ProfileFile>(&t).ok()).unwrap_or_else(|| {
-            let file = ProfileFile { gamertag: default_gamertag(), dashboard: String::new(), mapper: false, avatar: String::new() };
+            let file = ProfileFile { gamertag: default_gamertag(), dashboard: String::new(), mapper: false, avatar: String::new(), settings: Settings::default() };
             let _ = fs::write(dir.join("profile.toml"), toml::to_string(&file).unwrap_or_default());
             file
         });
-        let (gamertag, dashboard, mapper, avatar) = (file.gamertag, file.dashboard, file.mapper, file.avatar);
+        let (gamertag, dashboard, mapper, avatar, settings) = (file.gamertag, file.dashboard, file.mapper, file.avatar, file.settings);
 
         let unlocked = read_unlocks(&dir.join("unlocks.txt")).into_iter().map(|(g, a, t)| ((g, a), t)).collect();
 
@@ -159,7 +190,7 @@ impl Profile {
             .map(|g| (g.id.clone(), g))
             .collect();
 
-        Profile { dir, gamertag, dashboard, mapper, avatar, unlocked, games }
+        Profile { dir, gamertag, dashboard, mapper, avatar, settings, unlocked, games }
     }
 
     /// Saves the dashboard design choice to profile.toml.
@@ -174,8 +205,14 @@ impl Profile {
         self.save();
     }
 
+    /// Saves the overlay settings to profile.toml.
+    pub fn set_settings(&mut self, settings: Settings) {
+        self.settings = settings;
+        self.save();
+    }
+
     fn save(&self) {
-        let file = ProfileFile { gamertag: self.gamertag.clone(), dashboard: self.dashboard.clone(), mapper: self.mapper, avatar: self.avatar.clone() };
+        let file = ProfileFile { gamertag: self.gamertag.clone(), dashboard: self.dashboard.clone(), mapper: self.mapper, avatar: self.avatar.clone(), settings: self.settings.clone() };
         let _ = fs::write(self.dir.join("profile.toml"), toml::to_string(&file).unwrap_or_default());
     }
 

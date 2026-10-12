@@ -37,22 +37,11 @@ pub fn take_pictures() -> Vec<(String, PathBuf)> {
 /// profile's `pictures` folder, downloading new versions, and queues the
 /// ones not shown yet.
 fn fetch_pictures(profile: &std::path::Path, who: &[(String, String)], shown: &mut std::collections::HashSet<PathBuf>) {
-    let dir = profile.join("pictures");
     for (tag, avatar) in who {
-        let Some(version) = avatar.strip_prefix("img:") else { continue };
-        let safe: String = tag.chars().map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' }).collect();
-        let path = dir.join(format!("{safe}-{version}.jpg"));
+        let Some((path, url)) = shared::picture(profile, tag, avatar) else { continue };
         if !path.exists() {
-            let url = format!("{}/pic/{}?v={version}", shared::site(), tag.replace(' ', "%20"));
             let Ok(bytes) = crate::storeinfo::get(&url) else { continue };
-            let _ = std::fs::create_dir_all(&dir);
-            // (Old versions of this player's picture go.)
-            for old in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
-                if old.file_name().to_string_lossy().starts_with(&format!("{safe}-")) {
-                    let _ = std::fs::remove_file(old.path());
-                }
-            }
-            if std::fs::write(&path, bytes).is_err() {
+            if shared::save_picture(&path, &bytes).is_err() {
                 continue;
             }
         }

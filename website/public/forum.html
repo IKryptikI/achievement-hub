@@ -30,6 +30,7 @@
     </div>
     <label for="cb">Post</label><textarea id="cb" rows="6" maxlength="8000" placeholder="Paste a picture link (ending in .png, .jpg, .gif or .webp) to show it. **bold** and `code` work too."></textarea>
     <input name="website" id="hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+    <div class="human" id="human"></div>
     <div id="cmsg"></div>
     <p><button class="btn primary">Post</button> <button class="btn" type="button" id="cancel">Cancel</button></p>
   </form>
@@ -74,17 +75,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   let timer;
   $('#q').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { q = $('#q').value.trim(); load(); }, 300); });
-  $('#new').addEventListener('click', () => {
+  let check = null;
+  $('#new').addEventListener('click', async () => {
     if (!m) return (location.href = 'login.html?next=' + encodeURIComponent('forum.html'));
     $('#compose').hidden = false; $('#ct').focus();
+    check ||= await humanCheck($('#human'));
   });
   $('#cancel').addEventListener('click', () => ($('#compose').hidden = true));
   $('#compose').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      const r = await api('/forum', { method: 'POST', body: { title: $('#ct').value, tag: $('#cg').value, body: $('#cb').value, website: $('#hp').value } });
+      const r = await api('/forum', { method: 'POST', body: { title: $('#ct').value, tag: $('#cg').value, body: $('#cb').value, website: $('#hp').value, turnstile: check ? check.token() : '' } });
       location.href = 'thread.html?t=' + r.id;
-    } catch (err) { note($('#cmsg'), err.message); }
+    } catch (err) { note($('#cmsg'), err.message); check?.reset(); }
   });
 });
 </script>

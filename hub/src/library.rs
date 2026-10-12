@@ -103,7 +103,10 @@ fn payload_dir() -> Option<PathBuf> {
 fn swap_copy(src: &Path, dst: &Path) -> std::io::Result<()> {
     let tmp = dst.with_extension("new");
     fs::copy(src, &tmp)?;
-    fs::rename(&tmp, dst)
+    // (Windows won't replace a DLL a running game has loaded: leave it be.)
+    fs::rename(&tmp, dst).inspect_err(|_| {
+        let _ = fs::remove_file(&tmp);
+    })
 }
 
 /// Installs the launcher, overlay, achievement definitions and settings into
@@ -291,6 +294,39 @@ pub fn install_overlay_proxy(game: &Mapped, defs: &[&Definition]) -> Result<Stri
             proxy.trim_end_matches(".dll")
         )),
     }
+}
+
+/// Brings the overlay files in every game it's installed in up to date
+/// with this app's copies (after an update). Only replaces files that are
+/// ours and differ; a game that's running keeps its copy until next time.
+/// Returns the names of the games updated.
+pub fn refresh_overlays(games: &[Mapped]) -> Vec<String> {
+    let Some(payload) = payload_dir() else { return Vec::new() };
+    let read = |p: &Path| fs::read(p).ok();
+    let mut updated = Vec::new();
+    for g in games.iter().filter(|g| g.overlay_installed) {
+        let Some(dir) = g.game_exes.first().and_then(|e| e.parent()) else { continue };
+        let mut pairs: Vec<(PathBuf, PathBuf)> = vec![(payload.join("overlay.dll"), dir.join("overlay.dll")), (payload.join("overlay.dll"), dir.join(ASI_NAME))];
+        for p in PROXIES.iter().chain(["binkw32.dll"].iter()) {
+            pairs.push((payload.join(p), dir.join(p)));
+        }
+        let mut changed = false;
+        for (from, to) in pairs {
+            // Only files we put there (the overlay, or our stand-in DLLs).
+            let ours = to.file_name().is_some_and(|n| n == "overlay.dll" || n == ASI_NAME) || is_our_proxy(&to);
+            if !to.exists() || !ours {
+                continue;
+            }
+            let (Some(new), Some(old)) = (read(&from), read(&to)) else { continue };
+            if new != old && swap_copy(&from, &to).is_ok() {
+                changed = true;
+            }
+        }
+        if changed {
+            updated.push(g.name.clone());
+        }
+    }
+    updated
 }
 
 /// Removes everything `install_overlay_proxy` added.

@@ -93,6 +93,9 @@ struct Overlay {
     media: Media,
     /// Achievements unlocked since the last frame capture.
     capture_queue: Vec<String>,
+    /// The unlock screenshot came out blank (a loading screen or fade):
+    /// when to try again, and how many tries so far.
+    shot_retry: Option<(Instant, u32)>,
     mouse_down: bool,
     /// Pause: the panel's open state last frame, a request to capture the
     /// game frame to freeze on, the frame waiting for upload, its texture,
@@ -395,6 +398,13 @@ impl Overlay {
         if preview && std::env::var("AH_FRIENDS_DEMO").is_ok() {
             social::demo();
         }
+        // (Preview: sample counts on two Fallout 3 counters, to see the bars.)
+        if let (true, Some(g)) = (preview && std::env::var("AH_PROGRESS_DEMO").is_ok(), game.as_mut()) {
+            let locked: Vec<String> = g.achievements().iter().filter(|a| profile.unlocked_at(g.id(), &a.id).is_none()).take(2).map(|a| a.id.clone()).collect();
+            for (id, n) in locked.into_iter().zip([(54, 300), (7, 10)]) {
+                g.progress.insert(id, n);
+            }
+        }
         if !preview {
             let logd = dll_dir.clone();
             social::start(profile.dir.clone(), game.as_ref().map(|g| g.id().to_string()), move |m| log(&logd, m));
@@ -411,10 +421,13 @@ impl Overlay {
             // The built-in sounds, to listen to outside a game.
             sound::export(&dll_dir.join("sounds-preview"));
         } else {
-            let on = setting(&dll_dir, "sounds").is_none_or(|v| !v.eq_ignore_ascii_case("off"));
+            // (Settings screen, else the game's ini.)
+            let on = profile.settings.sounds && setting(&dll_dir, "sounds").is_none_or(|v| !v.eq_ignore_ascii_case("off"));
             let theme_dir = profile.dir.join("themes").join("blades");
             let theme_dir = theme_dir.join("theme.toml").exists().then_some(theme_dir);
             let custom = sound::init(&profile.dir, theme_dir.as_deref(), on);
+            sound::set_volume(profile.settings.volume);
+            toast::POPUPS_TOP.store(profile.settings.popups == "top", Ordering::Relaxed);
             logf(&format!("sounds: {}{}", if on { "on" } else { "off" }, if custom.is_empty() { String::new() } else { format!(" (yours: {})", custom.join(", ")) }));
         }
         if preview {
@@ -472,6 +485,14 @@ impl Overlay {
         if preview {
             let mut panel = Panel::default();
             panel.blade = std::env::var("AH_BLADE").ok().and_then(|b| ui::Blade::from_name(&b));
+            // AH_SETTINGS=1 opens the Settings screen.
+            if std::env::var("AH_SETTINGS").is_ok_and(|v| !v.is_empty()) {
+                panel.open_settings();
+            }
+            // AH_FILTER=locked shows only locked achievements in Now Playing.
+            if std::env::var("AH_FILTER").is_ok_and(|f| f == "locked") {
+                panel.preview_filter(2);
+            }
             return Some(Overlay {
                 game,
                 profile,
@@ -484,6 +505,7 @@ impl Overlay {
                 panel,
                 media,
                 capture_queue: Vec::new(),
+                shot_retry: None,
                 mouse_down: false,
                 was_open: false,
                 want_pause_frame: false,
@@ -503,7 +525,7 @@ impl Overlay {
         }
 
         let hotkeys = Hotkeys::new(
-            &setting(&dll_dir, "hotkey").unwrap_or(input::DEFAULT_KEY.into()),
+            &Some(profile.settings.hotkey.clone()).filter(|k| !k.is_empty()).or_else(|| setting(&dll_dir, "hotkey")).unwrap_or(input::DEFAULT_KEY.into()),
             &setting(&dll_dir, "pad_hotkey").unwrap_or(input::DEFAULT_PAD.into()),
         );
         logf(&format!("panel hotkey: {}", hotkeys.label));
@@ -527,6 +549,7 @@ impl Overlay {
             panel,
             media,
             capture_queue: Vec::new(),
+            shot_retry: None,
             mouse_down: false,
             was_open: false,
             want_pause_frame: false,
@@ -580,6 +603,9 @@ impl Overlay {
         for call in steam::take_seen() {
             log(&self.dir, &format!("steam: game called {call}"));
         }
+        for n in games::award::take_new() {
+            log(&self.dir, &format!("engine: the game awarded achievement {n}"));
+        }
         for api in steam::take() {
             log(&self.dir, &format!("steam: game reported {api}"));
             match game.by_steam_api(&api) {
@@ -615,7 +641,9 @@ impl Overlay {
             let a = &game.achievements()[i];
             log(&self.dir, &format!("unlocked {}", a.id));
             self.toasts.push_unlock(i);
-            self.capture_queue.push(a.id.clone());
+            if self.profile.settings.screenshots {
+                self.capture_queue.push(a.id.clone());
+            }
         }
     }
 }
@@ -804,6 +832,15 @@ impl ImguiRenderLoop for Overlay {
             if let Some(i) = self.panel.record_request.take() {
                 self.record(i);
             }
+            if let Some(s) = self.panel.settings_request.take() {
+                toast::POPUPS_TOP.store(s.popups == "top", Ordering::Relaxed);
+                if self.preview {
+                    self.profile.settings = s;
+                } else {
+                    log(&self.dir, &format!("settings: {s:?}"));
+                    self.profile.set_settings(s);
+                }
+            }
             if let Some(skin) = self.panel.skin_request.take().filter(|_| !self.preview) {
                 self.profile.set_dashboard(skin.id());
                 log(&self.dir, &format!("dashboard design: {}", skin.id()));
@@ -819,7 +856,7 @@ impl ImguiRenderLoop for Overlay {
     }
 
     fn wants_frame_capture(&mut self) -> bool {
-        !self.capture_queue.is_empty() || self.want_pause_frame
+        (!self.capture_queue.is_empty() && self.shot_due()) || self.want_pause_frame
     }
 
     fn on_frame_captured(&mut self, rgba: Vec<u8>, width: u32, height: u32) {
@@ -828,6 +865,20 @@ impl ImguiRenderLoop for Overlay {
             self.want_pause_frame = false;
             self.pending_frame = Some(Frame { rgba: Arc::clone(&rgba), width, height });
         }
+        if self.capture_queue.is_empty() || !self.shot_due() {
+            return;
+        }
+        // A loading screen, fade or title card makes a poor keepsake: wait a
+        // moment and take another (keeping the last try if it stays blank).
+        let tries = self.shot_retry.map_or(0, |(_, n)| n);
+        if tries < SHOT_RETRIES && looks_blank(&rgba, width, height) {
+            if tries == 0 {
+                log(&self.dir, "unlock screenshot: the screen is blank (loading screen?), trying again shortly");
+            }
+            self.shot_retry = Some((Instant::now() + Duration::from_millis(1000), tries + 1));
+            return;
+        }
+        self.shot_retry = None;
         let ids = std::mem::take(&mut self.capture_queue);
         if !ids.is_empty() {
             log(&self.dir, &format!("captured {width}x{height} screenshot for {}", ids.join(", ")));
@@ -913,4 +964,65 @@ pub unsafe extern "system" fn DllMain(hmodule: HINSTANCE, reason: u32, _: *mut s
         });
     }
     1
+}
+
+/// Tries at a blank unlock screenshot before keeping it anyway (about a
+/// second apart).
+const SHOT_RETRIES: u32 = 6;
+
+impl Overlay {
+    /// Whether a waiting unlock screenshot may be taken now.
+    fn shot_due(&self) -> bool {
+        self.shot_retry.is_none_or(|(at, _)| Instant::now() >= at)
+    }
+}
+
+/// True if a frame is (nearly) one flat color: a loading screen, a fade to
+/// black or white, a title card. Samples a grid of pixels and checks how
+/// many sit close to the most common brightness.
+fn looks_blank(rgba: &[u8], width: u32, height: u32) -> bool {
+    let (w, h) = (width as usize, height as usize);
+    if w == 0 || h == 0 || rgba.len() < w * h * 4 {
+        return false;
+    }
+    let (cols, rows) = (48, 27);
+    let mut luma: Vec<i32> = Vec::with_capacity(cols * rows);
+    for r in 0..rows {
+        for c in 0..cols {
+            let (x, y) = ((c * 2 + 1) * w / (cols * 2), (r * 2 + 1) * h / (rows * 2));
+            let i = (y * w + x) * 4;
+            // (Channel order doesn't matter much for brightness.)
+            luma.push((2 * rgba[i] as i32 + 5 * rgba[i + 1] as i32 + rgba[i + 2] as i32) / 8);
+        }
+    }
+    let mut sorted = luma.clone();
+    sorted.sort_unstable();
+    let median = sorted[sorted.len() / 2];
+    let near = luma.iter().filter(|&&l| (l - median).abs() <= 12).count();
+    near * 100 >= luma.len() * 94
+}
+
+#[cfg(test)]
+mod blank_tests {
+    use super::looks_blank;
+
+    fn frame(w: u32, h: u32, f: impl Fn(u32, u32) -> u8) -> Vec<u8> {
+        let f = &f;
+        (0..h).flat_map(|y| (0..w).flat_map(move |x| [f(x, y), f(x, y), f(x, y), 255])).collect::<Vec<u8>>()
+    }
+
+    #[test]
+    fn title_card_and_fades_are_blank() {
+        // White with a line of dark text in the middle ("THREE YEARS LATER").
+        let card = frame(320, 180, |x, y| if (85..95).contains(&y) && (110..210).contains(&x) && x % 3 != 0 { 40 } else { 250 });
+        assert!(looks_blank(&card, 320, 180));
+        assert!(looks_blank(&frame(320, 180, |_, _| 0), 320, 180));
+    }
+
+    #[test]
+    fn gameplay_is_not_blank() {
+        // Sky over ground, with detail.
+        let scene = frame(320, 180, |x, y| if y < 80 { 150 + (x % 40) as u8 } else { 60 + ((x * 7 + y * 3) % 90) as u8 });
+        assert!(!looks_blank(&scene, 320, 180));
+    }
 }

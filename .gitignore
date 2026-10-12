@@ -5,3 +5,4 @@ scripts/__pycache__/
 site-data/.icons-cache.json
 site-data/
 .build/
+website/.dev.vars

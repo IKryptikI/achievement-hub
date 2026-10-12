@@ -22,6 +22,9 @@
   <div id="gate"></div>
   <div id="body" hidden>
     <div class="stats" id="counts"></div>
+    <h2 style="margin-top:36px">Reports</h2>
+    <div class="filters" id="rtabs"></div>
+    <div id="reports"></div>
     <h2 style="margin-top:36px">Mapper applications</h2>
     <div class="filters" id="mtabs"></div>
     <div id="mappers"></div>
@@ -47,9 +50,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function load() {
     data = await api('/admin/summary');
     const c = data.counts;
-    $('#counts').innerHTML = [['Members', c.users], ['Linked apps', c.linked], ['Open requests', c.requests], ['Guides', c.guides]]
+    $('#counts').innerHTML = [['Members', c.users], ['Linked apps', c.linked], ['Open reports', c.reports], ['Open requests', c.requests], ['Guides', c.guides]]
       .map(([t, n]) => `<div class="card stat"><div class="n">${n}</div><div class="muted">${t}</div></div>`).join('');
     draw();
+    reports = (await api('/admin/reports')).reports;
+    drawReports();
     const reqs = (await api('/requests')).requests;
     $('#requests').innerHTML = reqs.map((r) => `<div class="ach"><b style="min-width:60px">▲ ${r.votes}</b><div class="body"><b>${esc(r.title)}</b><p>${esc(r.store)} ${r.by ? '· ' + esc(r.by) : ''} ${r.notes ? '· ' + esc(r.notes) : ''}</p></div>
       <select data-req="${r.id}" style="width:auto">${['open', 'planned', 'added', 'declined'].map((s) => `<option${s === r.status ? ' selected' : ''}>${s}</option>`).join('')}</select></div>`).join('') || '<p class="muted">No requests.</p>';
@@ -59,6 +64,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('#dlmap').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(maps.filter((x) => x.status === 'new'), null, 1)], { type: 'application/json' })); a.download = 'shared-mappings.json'; a.click(); };
     const news = (await api('/news')).news;
     $('#news').innerHTML = news.map((n) => `<div class="ach"><div class="body"><b>${esc(n.title)}</b><p>${new Date(n.created * 1000).toLocaleDateString()}</p></div><button class="btn small danger" data-delnews="${n.id}">Delete</button></div>`).join('');
+  }
+  let reports = [], rtab = 'open';
+  function drawReports() {
+    $('#rtabs').innerHTML = ['open', 'done', 'dismissed'].map((s) => `<button data-rt="${s}" class="${s === rtab ? 'on' : ''}">${s} ${reports.filter((r) => r.status === s).length}</button>`).join('');
+    const link = (r) => r.content && r.content.thread_id ? `thread.html?t=${r.content.thread_id}${r.kind === 'post' ? '#p' + r.target : ''}` : r.kind === 'tip' && r.content ? `game.html?g=${encodeURIComponent(r.content.game)}` : r.kind === 'user' ? `profile.html?u=${encodeURIComponent(r.target)}` : '#';
+    $('#reports').innerHTML = reports.filter((r) => r.status === rtab).map((r) => `
+      <div class="card" style="margin-bottom:12px">
+        <div class="row" style="justify-content:space-between"><b>${esc(r.kind)} by ${esc((r.content && r.content.gamertag) || r.target)}</b>
+          <span class="muted" style="font-size:.85rem">reported by ${esc(r.reporter || '?')} · ${ago(r.created)}</span></div>
+        <p style="margin:8px 0"><b>Why:</b> ${esc(r.reason)}</p>
+        ${r.content ? `<blockquote style="margin:0 0 10px;padding:8px 12px;border-left:3px solid var(--line);color:var(--muted);white-space:pre-wrap">${esc(String(r.content.body || '').slice(0, 600)) || '(empty)'}</blockquote>` : '<p class="muted">(Already deleted.)</p>'}
+        <div class="row" style="gap:8px">
+          <a class="btn small" href="${link(r)}" target="_blank">Open</a>
+          ${r.content && ['post', 'thread', 'tip'].includes(r.kind) ? `<button class="btn small danger" data-rdel="${r.id}">Delete it</button>` : ''}
+          ${(r.content && r.content.gamertag) ? `<button class="btn small danger" data-rban="${esc(r.content.gamertag)}">Ban ${esc(r.content.gamertag)}</button>` : ''}
+          ${r.status === 'open' ? `<button class="btn small" data-rst="done" data-rid="${r.id}">Handled</button><button class="btn small" data-rst="dismissed" data-rid="${r.id}">Dismiss</button>` : `<button class="btn small" data-rst="open" data-rid="${r.id}">Reopen</button>`}
+        </div></div>`).join('') || '<p class="muted">Nothing here.</p>';
   }
   function draw() {
     $('#mtabs').innerHTML = mstat.map((s) => `<button data-mt="${s}" class="${s === mtab ? 'on' : ''}">${s} ${data.mappers.filter((x) => x.status === s).length}</button>`).join('');
@@ -72,6 +94,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   document.addEventListener('click', async (e) => {
     if (e.target.dataset.mt) { mtab = e.target.dataset.mt; draw(); }
+    const d = e.target.dataset;
+    if (d.rt) { rtab = d.rt; drawReports(); }
+    if (d.rst) { await api('/admin/reports/' + d.rid, { method: 'PATCH', body: { status: d.rst } }); load(); }
+    if (d.rdel) {
+      const r = reports.find((x) => String(x.id) === d.rdel);
+      if (!confirm(`Delete this ${r.kind}?`)) return;
+      try {
+        await api(r.kind === 'post' ? `/forum/posts/${r.target}` : r.kind === 'thread' ? `/forum/${r.target}` : `/guides/${r.target}`, { method: 'DELETE' });
+        await api('/admin/reports/' + r.id, { method: 'PATCH', body: { status: 'done' } }); load();
+      } catch (err) { alert(err.message); }
+    }
+    if (d.rban) {
+      const reason = prompt(`Ban ${d.rban}? Reason (shown to them):`);
+      if (reason === null) return;
+      try { await api(`/admin/users/${encodeURIComponent(d.rban)}/ban`, { method: 'POST', body: { banned: true, reason } }); alert(`${d.rban} is banned.`); } catch (err) { alert(err.message); }
+    }
     if (e.target.dataset.delnews && confirm('Delete this post?')) { await api('/admin/news/' + e.target.dataset.delnews, { method: 'DELETE' }); load(); }
   });
   document.addEventListener('change', async (e) => {

@@ -164,8 +164,14 @@ function setTheme(t) {
       <nav class="main">${links.map(([h, t]) => `<a href="${h}"${!h.startsWith('http') && page(h) === active ? ' class="on"' : ''}${h.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>${t}</a>`).join('')}</nav>
       <button class="theme-btn" id="theme" title="Light / dark"></button>
       <div class="account" id="account"></div>
+      <button class="menu-btn" id="menu" aria-label="Menu" aria-expanded="false"><i></i><i></i><i></i></button>
     </div></header>`);
   setTheme(document.documentElement.dataset.theme || 'dark');
+  // Phones: the links fold into a menu.
+  $('#menu').onclick = () => {
+    const open = document.querySelector('header.top').classList.toggle('open');
+    $('#menu').setAttribute('aria-expanded', open);
+  };
   $('#theme').onclick = () => setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
   document.querySelector('main')?.classList.add('page-in');
   // Primary buttons get a light sweep.
@@ -202,7 +208,12 @@ function setTheme(t) {
     ? `<a href="profile.html?u=${encodeURIComponent(m.gamertag)}" class="person" title="Your profile">${pic(m, true)}</a>
        <a class="btn small" href="account.html">Account</a>${m.is_admin ? '<a class="btn small" href="admin.html">Admin</a>' : ''}`
     : `<a class="btn small" href="login.html">Log in</a><a class="btn small primary" href="signup.html">Sign up</a>`;
+  // (The same account links inside the phone menu.)
+  $('nav.main').insertAdjacentHTML('beforeend', m
+    ? `<a class="m-only" href="account.html">Account</a>${m.is_admin ? '<a class="m-only" href="admin.html">Admin</a>' : ''}`
+    : '<a class="m-only" href="login.html">Log in</a><a class="m-only" href="signup.html">Sign up</a>');
   if (m) {
+    emailBanner(m);
     siteUnlocks(m);
     // Keep the gamercard image fresh (drawn here, see refreshCard).
     if (Date.now() / 1000 - (m.card_updated || 0) > 3 * 3600 || (m.sent || 0) > (m.card_updated || 0))
@@ -264,3 +275,62 @@ const TAG_LOOK = {
 };
 const tagChip = (t) => `<span class="ftag ftag-${esc(t)}">${(TAG_LOOK[t] || ['', t])[1]}</span>`;
 const nameTag = (x) => `<span class="fname" style="color:${esc(x.color || '#4cc931')}">${esc(x.gamertag || 'deleted')}</span>${x.is_admin ? '<span class="dev-tag">DEV</span>' : ''}`;
+
+// ── Protection: site settings, the "I'm human" check, reports ──
+let CONFIG = null;
+const siteConfig = () => (CONFIG ||= fetch('/api/config').then((r) => r.json()).catch(() => ({ turnstile: null, email: false })));
+
+/** Puts Cloudflare's bot check in `el` (if it's set up). Returns a function
+ * giving the token to send along (empty if not set up), and a reset. */
+async function humanCheck(el) {
+  const cfg = await siteConfig();
+  if (!cfg.turnstile) return { token: () => '', reset: () => {} };
+  if (!window.turnstile) {
+    await new Promise((ok) => {
+      const s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      s.onload = ok;
+      document.head.append(s);
+    });
+  }
+  let token = '';
+  const id = window.turnstile.render(el, {
+    sitekey: cfg.turnstile,
+    theme: document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
+    callback: (t) => (token = t),
+    'expired-callback': () => (token = ''),
+  });
+  return { token: () => token, reset: () => { token = ''; window.turnstile.reset(id); } };
+}
+
+/** Asks why, then reports something to the admin. */
+async function report(kind, target) {
+  if (!(await me())) return (location.href = 'login.html?next=' + encodeURIComponent(location.pathname + location.search));
+  const reason = prompt('What is wrong with it? (spam, slurs, harassment, something else)');
+  if (reason === null) return;
+  try { await api('/reports', { method: 'POST', body: { kind, target: String(target), reason } }); alert('Thanks, the admin will take a look.'); }
+  catch (err) { alert(err.message); }
+}
+
+/** A banner asking to add or verify an email, when that's needed. */
+async function emailBanner(m) {
+  const cfg = await siteConfig();
+  if (!m || m.is_admin || (m.email && (m.email_verified || !cfg.email))) return;
+  const el = document.createElement('div');
+  el.className = 'notice-bar';
+  if (!m.email) {
+    el.innerHTML = `<div class="wrap">Add an email address to your account (needed to post and to reset your password). <a href="account.html#email">Add it</a></div>`;
+  } else {
+    el.innerHTML = `<div class="wrap"><span>We sent a 6-digit code to <b>${esc(m.email)}</b>. Enter it to verify your email:</span>
+      <input id="vcode" inputmode="numeric" maxlength="7" placeholder="123456" style="width:110px">
+      <button class="btn small primary" id="vgo">Verify</button><button class="linkbtn" id="vre">Send a new code</button><span id="vmsg"></span></div>`;
+  }
+  document.querySelector('header.top')?.after(el);
+  $('#vgo')?.addEventListener('click', async () => {
+    try { await api('/me/verify', { method: 'POST', body: { code: $('#vcode').value } }); el.innerHTML = '<div class="wrap">Email verified. Thanks!</div>'; setTimeout(() => el.remove(), 2500); }
+    catch (err) { $('#vmsg').textContent = err.message; }
+  });
+  $('#vre')?.addEventListener('click', async () => {
+    try { await api('/me/verify/resend', { method: 'POST' }); $('#vmsg').textContent = 'Sent!'; } catch (err) { $('#vmsg').textContent = err.message; }
+  });
+}

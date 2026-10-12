@@ -12,6 +12,7 @@
 
 import { rateLimit } from './_community.js';
 import { badText } from './_filter.js';
+import { human, NOT_HUMAN, mayPost } from './_protect.js';
 
 export const TAGS = ['announcements', 'help', 'bug', 'game-support', 'mapping', 'suggestion', 'showcase', 'general'];
 export const REACTIONS = ['👍', '❤️', '😂', '🔥', '🏆', '👀'];
@@ -107,6 +108,8 @@ export async function forum(c) {
       const text = clip((await body(req)).body, 8000);
       if (text.length < 2) return fail(400, 'Write something first.');
       if (badText(text)) return fail(400, badText(text));
+      const no = await mayPost(env, u, [text]);
+      if (no) return fail(403, no);
       await env.DB.prepare('UPDATE forum_posts SET body = ?, edited = ? WHERE id = ?').bind(text, now(), pid).run();
       return json({ ok: true });
     }
@@ -160,6 +163,9 @@ export async function forum(c) {
     if (title.length < 4) return fail(400, 'Give it a title (4+ characters).');
     if (text.length < 2) return fail(400, 'Write something first.');
     if (badText(title, text)) return fail(400, badText(title, text));
+    const no = await mayPost(env, u, [title, text], ['forum_posts', 'body']);
+    if (no) return fail(403, no);
+    if (!(await human(env, req, b.turnstile))) return fail(400, NOT_HUMAN);
     const t = now();
     const id = (await env.DB.prepare('INSERT INTO forum_threads (tag, title, user_id, created, last_post) VALUES (?, ?, ?, ?, ?)').bind(tag, title, u.id, t, t).run()).meta.last_row_id;
     await env.DB.prepare('INSERT INTO forum_posts (thread_id, user_id, body, created) VALUES (?, ?, ?, ?)').bind(id, u.id, text, t).run();
@@ -196,6 +202,8 @@ export async function forum(c) {
     const text = clip((await body(req)).body, 8000);
     if (text.length < 2) return fail(400, 'Write something first.');
     if (badText(text)) return fail(400, badText(text));
+    const no = await mayPost(env, u, [text], ['forum_posts', 'body']);
+    if (no) return fail(403, no);
     const t = now();
     await env.DB.batch([
       env.DB.prepare('INSERT INTO forum_posts (thread_id, user_id, body, created) VALUES (?, ?, ?, ?)').bind(id, u.id, text, t),

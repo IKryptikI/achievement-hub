@@ -59,7 +59,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div style="margin-top:6px">${status}</div></div>
       <div>${action}</div></div>
     <div id="msg"></div>
-    ${ADMIN && p.relation !== 'self' && (p.avatar || '').startsWith('img:') ? '<p><button class="btn small danger" id="rmpic">Remove their picture (admin)</button></p>' : ''}
+    <div class="row" style="gap:8px;margin-top:8px">
+      ${ADMIN && p.relation !== 'self' && (p.avatar || '').startsWith('img:') ? '<button class="btn small danger" id="rmpic">Remove their picture</button>' : ''}
+      ${ADMIN && p.relation !== 'self' ? `<button class="btn small danger" id="ban">${p.banned ? 'Unban' : 'Ban'} ${esc(p.gamertag)}</button>` : ''}
+      ${p.relation !== 'self' ? '<button class="report-link" id="rep">Report this profile</button>' : ''}
+    </div>
     ${(p.badges || []).length ? `<h2 style="margin-top:28px">Site achievements <span class="muted" style="font-size:1rem">${p.badges.filter((b) => b.unlocked).length} of ${p.badges.length}</span></h2>
       <div class="siteach">${[...p.badges].sort((a, b) => b.unlocked - a.unlocked).map((b) => `<div class="a${b.unlocked ? '' : ' locked'}" title="${esc(b.text)}"><div class="i">${b.unlocked ? b.icon : '🔒'}</div><div><b>${esc(b.name)}</b><span>${esc(b.text)}</span></div></div>`).join('')}</div>` : ''}
     ${show.length ? `<h2 style="margin-top:28px">Showcase</h2><div class="grid">${show.map((a) => `
@@ -74,10 +78,8 @@ document.addEventListener('DOMContentLoaded', async () => {
            <a class="card game lift" href="game.html?g=${encodeURIComponent(g.id)}${p.relation === 'friend' ? '&vs=' + encodeURIComponent(p.gamertag) : ''}"><h3>${esc(g.title)}</h3>
              <span class="muted">${g.unlocked} of ${g.total} · <span class="gs">${g.points}</span> / ${g.total_points}</span>
              <div class="bar"><i style="width:${g.total ? Math.round(100 * g.unlocked / g.total) : 0}%"></i></div>${p.relation === 'friend' ? '<span class="muted" style="font-size:.85rem">Compare →</span>' : ''}</a>`).join('') : '<p class="muted">No games yet.</p>'}</div>
-         <h2 style="margin-top:30px">Recent achievements</h2>
-         ${p.recent.length ? '<div class="grid">' + p.recent.slice(0, 12).map((r) => `
-           <div class="card"><b>${esc(r.name)}</b> <span class="gs" style="float:right">${r.points}</span><br>
-             <span class="muted">${esc(r.title)} · ${new Date(r.time * 1000).toLocaleDateString()}</span></div>`).join('') + '</div>' : '<p class="muted">None yet.</p>'}`}
+         <h2 style="margin-top:30px">Timeline</h2>
+         <div id="timeline"><div class="skel" style="height:70px;margin-bottom:8px"></div><div class="skel" style="height:70px"></div></div>`}
     <h2 style="margin-top:30px">Gamercard</h2>
     <div class="card"><img src="/card/${encodeURIComponent(p.gamertag)}.png?v=${Math.floor(Date.now() / 600000)}" alt="${esc(p.gamertag)}'s gamercard" style="width:100%;max-width:600px;border-radius:14px;display:block">
       <p class="muted" style="margin-bottom:6px">Show it off in Discord, forums or your signature:</p>
@@ -88,6 +90,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     const v = e.target.dataset.copy;
     if (!v) return;
     try { await navigator.clipboard.writeText(v); note($('#cmsg'), 'Copied!', true); } catch { prompt('Copy this:', v); }
+  });
+  // Timeline: every unlock by day, newest first.
+  if (p.games !== undefined) {
+    (async () => {
+      let unlocks = [];
+      try { ({ unlocks } = await api(`/users/${encodeURIComponent(p.gamertag)}/timeline`)); } catch {}
+      if (!unlocks.length) return ($('#timeline').innerHTML = '<p class="muted">No achievements yet.</p>');
+      const info = {};
+      await Promise.all([...new Set(unlocks.map((u) => u.game))].map(async (gid) => {
+        try { const d = await game(gid); info[gid] = { title: d.title, ach: Object.fromEntries(d.achievements.map((a) => [a.id, a])) }; } catch {}
+      }));
+      const dayOf = (t) => {
+        if (!t) return 'Earlier';
+        const d = new Date(t * 1000), today = new Date();
+        const days = Math.round((new Date(today.toDateString()) - new Date(d.toDateString())) / 86400000);
+        return days === 0 ? 'Today' : days === 1 ? 'Yesterday' : d.toLocaleDateString(undefined, { weekday: days < 7 ? 'long' : undefined, month: 'long', day: 'numeric', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+      };
+      let shown = 40;
+      const draw = () => {
+        let html = '', last = null;
+        for (const u of unlocks.slice(0, shown)) {
+          const g = info[u.game], a = g && g.ach[u.achievement];
+          if (!a) continue;
+          const day = dayOf(u.time);
+          if (day !== last) { html += `<h3 class="tl-day">${esc(day)}</h3>`; last = day; }
+          html += `<a class="tl-item" href="game.html?g=${encodeURIComponent(u.game)}">${a.icon ? `<img src="${esc(a.icon)}" alt="" loading="lazy">` : '<span class="tl-noicon"></span>'}
+            <span class="grow"><b>${esc(a.name)}</b><span class="muted">${esc(g.title)}${u.time ? ' · ' + new Date(u.time * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''}</span></span><span class="gs">${a.points}</span></a>`;
+        }
+        if (unlocks.length > shown) html += `<p><button class="btn small" id="tl-more">Show more (${unlocks.length - shown} left)</button></p>`;
+        $('#timeline').innerHTML = html;
+        $('#tl-more')?.addEventListener('click', () => { shown += 60; draw(); });
+      };
+      draw();
+    })();
+  }
+  $('#rep')?.addEventListener('click', () => report('user', p.gamertag));
+  $('#ban')?.addEventListener('click', async () => {
+    const reason = p.banned ? '' : prompt(`Ban ${p.gamertag}? They'll be logged out and can't log in or post. Reason (shown to them):`);
+    if (reason === null) return;
+    try { await api(`/admin/users/${encodeURIComponent(p.gamertag)}/ban`, { method: 'POST', body: { banned: !p.banned, reason } }); location.reload(); } catch (err) { note($('#msg'), err.message); }
   });
   $('#rmpic')?.addEventListener('click', async () => {
     if (!confirm(`Remove ${p.gamertag}'s gamer picture?`)) return;

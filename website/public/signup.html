@@ -18,11 +18,12 @@
 <body>
 <main><section><div class="wrap card reveal" style="max-width:480px">
   <h1>Create your account</h1>
-  <p class="muted">Your gamertag is how friends find you. Email is optional for now.</p>
+  <p class="muted">Your gamertag is how friends find you. Your email stays private: it's for verifying your account and resetting your password.</p>
   <form id="f">
     <label for="gt">Gamertag</label><input id="gt" required minlength="3" maxlength="16" autocomplete="username">
     <label for="pw">Password</label><input id="pw" type="password" required minlength="8" autocomplete="new-password">
-    <label for="em">Email (optional)</label><input id="em" type="email" autocomplete="email">
+    <label for="em">Email</label><input id="em" type="email" required autocomplete="email">
+    <div class="human" id="human"></div>
     <input id="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
     <div id="msg"></div>
     <p style="margin-top:18px"><button class="btn primary">Create account</button></p>
@@ -41,13 +42,16 @@ function showRecovery(code, next) {
   $('#dl').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([`Achievement Hub recovery code for ${$('#gt').value}:\n${code}\n`], { type: 'text/plain' })); a.download = 'achievement-hub-recovery-code.txt'; a.click(); };
   $('#go').onclick = () => (location.href = next);
 }
-document.addEventListener('DOMContentLoaded', () => { passwordField($('#pw')); strengthMeter($('#pw')); });
-document.addEventListener('DOMContentLoaded', () => $('#f').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  try {
-    const r = await api('/signup', { method: 'POST', body: { gamertag: $('#gt').value, password: $('#pw').value, email: $('#em').value, website: $('#website').value } });
-    showRecovery(r.recovery_code, 'account.html?welcome=1');
-  } catch (err) { note($('#msg'), err.message); }
-}));
+document.addEventListener('DOMContentLoaded', async () => {
+  passwordField($('#pw')); strengthMeter($('#pw'));
+  const check = await humanCheck($('#human'));
+  $('#f').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const r = await api('/signup', { method: 'POST', body: { gamertag: $('#gt').value, password: $('#pw').value, email: $('#em').value, website: $('#website').value, turnstile: check.token() } });
+      showRecovery(r.recovery_code, 'account.html?welcome=1');
+    } catch (err) { note($('#msg'), err.message); check.reset(); }
+  });
+});
 </script>
 </body></html>

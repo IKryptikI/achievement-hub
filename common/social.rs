@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// The website (until a domain is bought). AH_SITE overrides it (testing).
 pub const SITE: &str = "https://achievementhub.pages.dev";
@@ -127,6 +127,9 @@ pub struct GameProgress {
     /// are confirmed to work.
     #[serde(default)]
     pub ids: Vec<String>,
+    /// When each of `ids` was unlocked (unix seconds), same order.
+    #[serde(default)]
+    pub times: Vec<u64>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -181,6 +184,7 @@ pub fn snapshot(profile: &Path, playing: Option<&str>) -> Profile {
                 total_points: s.total_points,
                 last_played: s.last_played,
                 ids: mine.iter().map(|a| a.id.clone()).collect(),
+                times: mine.iter().map(|a| unlocks.iter().find(|(g, id, _)| *g == s.id && *id == a.id).map_or(0, |(_, _, t)| *t)).collect(),
             }
         })
         .collect();
@@ -234,6 +238,31 @@ pub struct Look {
 /// The player's own look from the friends reply (None from older sites).
 pub fn parse_me(body: &[u8]) -> Option<Look> {
     serde_json::from_slice::<FriendsReply>(body).ok().and_then(|r| r.me)
+}
+
+/// Where a player's uploaded gamer picture ("img:<version>") is cached in
+/// the profile folder, and the address to download it from. None if they
+/// have no uploaded picture. (Shared by the app and the overlay.)
+pub fn picture(profile: &Path, gamertag: &str, avatar: &str) -> Option<(PathBuf, String)> {
+    let version = avatar.strip_prefix("img:")?;
+    let safe: String = gamertag.chars().map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' }).collect();
+    let path = profile.join("pictures").join(format!("{safe}-{version}.jpg"));
+    Some((path, format!("{}/pic/{}?v={version}", site(), gamertag.replace(' ', "%20"))))
+}
+
+/// Saves a downloaded picture, removing older versions of that player's.
+pub fn save_picture(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let dir = path.parent().unwrap_or(Path::new("."));
+    std::fs::create_dir_all(dir)?;
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let prefix = name.rsplit_once('-').map(|(p, _)| format!("{p}-")).unwrap_or_default();
+    for old in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+        let n = old.file_name().to_string_lossy().into_owned();
+        if n != name && n.starts_with(&prefix) && n[prefix.len()..].chars().next().is_some_and(|c| c.is_ascii_digit()) {
+            let _ = std::fs::remove_file(old.path());
+        }
+    }
+    std::fs::write(path, bytes)
 }
 
 pub fn profile_url() -> String {

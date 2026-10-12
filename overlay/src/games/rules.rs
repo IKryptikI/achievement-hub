@@ -69,6 +69,10 @@ pub struct Condition {
     /// "locks_picked", ... see MISC_STATS).
     #[serde(default)]
     stat: Option<String>,
+    /// Engine query: holds once the game's own scripts award this
+    /// achievement number (see `award_command`). Needs no comparison.
+    #[serde(default)]
+    award: Option<u32>,
     /// With `count`: check `count` values `stride` bytes apart; the
     /// condition holds if any of them matches (e.g. inventory slots).
     #[serde(default)]
@@ -103,6 +107,7 @@ impl Condition {
         match (&self.quest, self.faction, self.address) {
             (Some(q), ..) => format!("quest {q}"),
             _ if self.quest_done.is_some() => format!("quest {}", self.quest_done.as_deref().unwrap_or_default()),
+            _ if self.award.is_some() => format!("award {}", self.award.unwrap_or_default()),
             (_, Some(f), _) => format!("faction {f:#x}"),
             (_, _, Some(a)) => format!("{a:#x}"),
             _ => "condition".into(),
@@ -115,12 +120,12 @@ impl Condition {
         }
         let cmps = [self.eq, self.ne, self.lt, self.le, self.gt, self.ge].iter().filter(|c| c.is_some()).count()
             + self.between.is_some() as usize;
-        if cmps == 0 && self.quest_done.is_none() {
+        if cmps == 0 && self.quest_done.is_none() && self.award.is_none() {
             return Err(format!("{} has no comparison (eq/ne/lt/le/gt/ge/between)", self.what()));
         }
-        let sources = (self.read.is_some() && self.address.is_some()) as u8 + self.quest.is_some() as u8 + self.faction.is_some() as u8 + self.quest_done.is_some() as u8 + self.player.is_some() as u8 + self.stat.is_some() as u8;
+        let sources = (self.read.is_some() && self.address.is_some()) as u8 + self.quest.is_some() as u8 + self.faction.is_some() as u8 + self.quest_done.is_some() as u8 + self.player.is_some() as u8 + self.stat.is_some() as u8 + self.award.is_some() as u8;
         if sources != 1 {
-            return Err(format!("{}: give exactly one of read+address, quest, quest_done, faction, player or stat", self.what()));
+            return Err(format!("{}: give exactly one of read+address, quest, quest_done, faction, player, stat or award", self.what()));
         }
         if let Some(name) = &self.stat {
             if !MISC_STATS.contains(&name.as_str()) {
@@ -167,6 +172,9 @@ impl Condition {
         if let Some(name) = &self.stat {
             return mem.misc_stat(name).is_some_and(|v| self.matches(v));
         }
+        if let Some(n) = self.award {
+            return super::award::awarded(n);
+        }
         let (Some(read), Some(address)) = (self.read, self.address) else { return false };
         let address = if self.relative { address + crate::recorder::exe_base() as u64 } else { address };
         (0..self.count as u64).any(|i| {
@@ -174,6 +182,33 @@ impl Condition {
             let v = if self.previous { mem.previous(read, addr) } else { mem.current(read, addr) };
             v.is_some_and(|v| self.matches(self.mask.map_or(v, |m| v & m)))
         })
+    }
+
+    /// How far along a counting condition is ("reach N": a single ge/gt
+    /// on a stat, the player's level, or a memory counter): (now, target).
+    pub fn progress(&self, mem: &mut Memory) -> Option<(i64, i64)> {
+        if !self.unknown.is_empty() || self.eq.is_some() || self.ne.is_some() || self.lt.is_some() || self.le.is_some() || self.between.is_some() {
+            return None;
+        }
+        let target = match (self.ge, self.gt) {
+            (Some(n), None) => n,
+            (None, Some(n)) => n + 1,
+            _ => return None,
+        };
+        if target < 2 {
+            return None; // "has it at all": nothing to count
+        }
+        let now = if let Some(name) = &self.stat {
+            mem.misc_stat(name)?
+        } else if self.player == Some(PlayerValue::Level) {
+            mem.player_value(PlayerValue::Level)?
+        } else if let (Some(read), Some(address), None, 1, false) = (self.read, self.address, self.mask, self.count, self.previous) {
+            let address = if self.relative { address + crate::recorder::exe_base() as u64 } else { address };
+            mem.current(read, address)?
+        } else {
+            return None;
+        };
+        Some((now.clamp(0, target), target))
     }
 
     /// A plain memory condition (record mode's findings).
@@ -187,6 +222,7 @@ impl Condition {
             faction: None,
             player: None,
             stat: None,
+            award: None,
             stride: 0,
             count: 1,
             relative: false,
@@ -208,7 +244,7 @@ impl Condition {
 
     /// Whether this asks the engine (needs the game's `[engine]` block).
     pub fn uses_engine(&self) -> bool {
-        self.quest.is_some() || self.quest_done.is_some() || self.faction.is_some() || self.player.is_some() || self.stat.is_some()
+        self.quest.is_some() || self.quest_done.is_some() || self.faction.is_some() || self.player.is_some() || self.stat.is_some() || self.award.is_some()
     }
 }
 
@@ -237,6 +273,13 @@ pub struct Engine {
     /// found by scanning memory for it (the exe moves between launches).
     #[serde(default)]
     pub quest_vtable: u64,
+    /// Fallout 3: catch the script command that awards achievements
+    /// (AddAchievement), reading its number with the game's own argument
+    /// reader at `extract_args_rva`. Conditions then use `award = N`.
+    #[serde(default)]
+    pub catch_add_achievement: bool,
+    #[serde(default)]
+    pub extract_args_rva: u64,
 }
 
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -378,7 +421,16 @@ pub struct Memory {
     /// put for the session).
     quests: HashMap<String, u64>,
     quests_scanned: bool,
+    /// Polls so far, and per player value (level, karma): the last reading,
+    /// the poll it was taken in, and for how many polls in a row it has
+    /// held. While a save loads the player reads half-built (karma 0 with
+    /// the old level), so a value only counts once it has held a while.
+    polls: u64,
+    steady: HashMap<u8, (i64, u64, u32)>,
 }
+
+/// Polls (about 0.1 s each) a player value must hold before it counts.
+const STEADY_POLLS: u32 = 30;
 
 impl Memory {
     pub fn with_engine(engine: Option<Engine>) -> Memory {
@@ -386,6 +438,7 @@ impl Memory {
     }
 
     pub fn begin_poll(&mut self) {
+        self.polls += 1;
         self.current.clear();
     }
 
@@ -495,6 +548,21 @@ impl Memory {
     /// The player's level or karma (Fallout 3), or None while no game is
     /// loaded.
     pub fn player_value(&mut self, which: PlayerValue) -> Option<i64> {
+        let raw = self.player_value_now(which);
+        let key = which as u8;
+        let Some(v) = raw else {
+            self.steady.remove(&key);
+            return None;
+        };
+        let poll = self.polls;
+        let e = self.steady.entry(key).or_insert((v, poll, 0));
+        if e.1 != poll || e.2 == 0 {
+            *e = if e.0 == v { (v, poll, e.2 + 1) } else { (v, poll, 1) };
+        }
+        (e.2 >= STEADY_POLLS).then_some(v)
+    }
+
+    fn player_value_now(&mut self, which: PlayerValue) -> Option<i64> {
         let engine = self.engine?;
         if engine.kind != EngineKind::Fallout3 || engine.player_rva == 0 {
             return None;

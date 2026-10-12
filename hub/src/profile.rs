@@ -15,10 +15,12 @@ pub struct AchievementSummary {
     #[serde(default)]
     pub description: String,
     #[serde(default)]
+    #[allow(dead_code)]
     pub category: String,
     #[serde(default)]
     pub secret: bool,
     #[serde(default)]
+    #[allow(dead_code)]
     pub platinum: bool,
     #[serde(default = "yes")]
     pub trackable: bool,
@@ -128,14 +130,6 @@ impl Profile {
     pub fn achievement_icon(&self, game: &str, id: &str) -> PathBuf {
         self.dir.join("screenshots").join(game).join(format!("{id}.icon.png"))
     }
-
-    pub fn screenshot_thumb(&self, game: &str, id: &str) -> PathBuf {
-        self.dir.join("screenshots").join(game).join(format!("{id}.thumb.png"))
-    }
-}
-
-fn now() -> u64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
 }
 
 /// "5 Oct 2026" (UTC).
@@ -161,4 +155,8 @@ pub fn format_ago(unix: u64) -> String {
         d @ 2..=6 => format!("{d} days ago"),
         _ => format_date(unix),
     }
+}
+
+fn now() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
 }

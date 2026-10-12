@@ -13,7 +13,7 @@ use crate::media::{Kind, Media};
 use crate::profile::{format_ago, Profile};
 use crate::Fonts;
 use anim::{ease_out_back, ease_out_cubic, lerp, lerp_color, Anim};
-use hudhook::imgui::{Condition, DrawListMut, StyleColor, StyleVar, Ui, WindowFlags};
+use hudhook::imgui::{Condition, DrawListMut, MouseButton, StyleColor, StyleVar, Ui, WindowFlags};
 use list::AchList;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc::Receiver;
@@ -68,7 +68,12 @@ struct Layout {
 }
 
 /// Blades Home menu: four items plus the game tile.
-const HOME_ITEMS: usize = 5;
+const HOME_ITEMS: usize = 6;
+
+/// The Settings screen's rows.
+const SETTING_ROWS: usize = 6;
+const VOLUMES: [u8; 4] = [25, 50, 75, 100];
+const HOTKEYS: [(&str, &str); 5] = [("shift+f2", "Shift+F2"), ("f1", "F1"), ("f9", "F9"), ("home", "Home"), ("insert", "Insert")];
 
 /// Width of a folded blade (and of the active blade's label strip).
 const TAB: f32 = 58.0;
@@ -153,6 +158,10 @@ pub struct Panel {
     pub record_refused: Option<String>,
     /// A dashboard design the player just picked (saved by the caller).
     pub skin_request: Option<Skin>,
+    /// The Settings screen: open on the highlighted row.
+    settings_row: Option<usize>,
+    /// Settings the player just changed (saved and applied by the caller).
+    pub settings_request: Option<crate::profile::Settings>,
     /// Where the panel sits and how much it's scaled (for mapping the mouse).
     view: ([f32; 2], f32),
     /// Design shown last frame (to animate a change).
@@ -160,6 +169,121 @@ pub struct Panel {
 }
 
 impl Panel {
+    /// Preview tool: step the Now Playing filter (all, unlocked, locked).
+    pub fn preview_filter(&mut self, steps: usize) {
+        for _ in 0..steps {
+            self.now.cycle_filter();
+        }
+    }
+
+    pub fn open_settings(&mut self) {
+        crate::sound::play(crate::sound::Sfx::Select);
+        self.settings_row = Some(0);
+        self.anim.set("settings_t", 0.0);
+    }
+
+    /// Changes the highlighted setting one step (`dir` -1 or +1).
+    fn change_setting(&mut self, row: usize, dir: i32, current: &crate::profile::Settings, skin: Skin) {
+        let mut s = self.settings_request.clone().unwrap_or_else(|| current.clone());
+        let step = |len: usize, at: usize| ((at as i64 + dir as i64).rem_euclid(len as i64)) as usize;
+        match row {
+            0 => s.sounds = !s.sounds,
+            1 => s.volume = VOLUMES[step(VOLUMES.len(), VOLUMES.iter().position(|v| *v == s.volume).unwrap_or(3))],
+            2 => s.popups = if s.popups == "top" { "bottom".into() } else { "top".into() },
+            3 => s.screenshots = !s.screenshots,
+            4 => s.hotkey = HOTKEYS[step(HOTKEYS.len(), HOTKEYS.iter().position(|(k, _)| *k == s.hotkey).unwrap_or(0))].0.into(),
+            _ => {
+                self.skin_request = Some(if dir > 0 { skin.next() } else { skin.next().next() });
+                return;
+            }
+        }
+        crate::sound::set_enabled(s.sounds);
+        crate::sound::set_volume(s.volume);
+        crate::sound::play(crate::sound::Sfx::Select);
+        self.settings_request = Some(s);
+    }
+
+    /// Keys and buttons while Settings is open: up/down (via `navigate`)
+    /// pick a row, left/right or A change it, B closes.
+    fn settings_input(&mut self, keys: u64, pad: u32, current: &crate::profile::Settings, skin: Skin) {
+        let Some(row) = self.settings_row else { return };
+        let h = input::HNAV.swap(0, Ordering::Relaxed);
+        let dir = if h != 0 { h.signum() } else if keys & KEY_ENTER != 0 || pad & PAD_A != 0 { 1 } else { 0 };
+        if dir != 0 {
+            self.change_setting(row, dir, current, skin);
+        } else if keys & (KEY_ESC | KEY_BACK) != 0 || pad & PAD_B != 0 {
+            crate::sound::play(crate::sound::Sfx::Back);
+            self.settings_row = None;
+        }
+    }
+
+    /// The Settings screen, over a dimmed panel.
+    fn draw_settings(&mut self, ui: &Ui, fonts: &Fonts, profile: &Profile, skin: Skin, origin: [f32; 2], width: f32, height: f32) {
+        let Some(sel) = self.settings_row else { return };
+        let s = self.settings_request.clone().unwrap_or_else(|| profile.settings.clone());
+        let t = ease_out_cubic(self.anim.timer("settings_t", 0.25));
+        let hotkey = HOTKEYS.iter().find(|(k, _)| *k == s.hotkey).map_or("Shift+F2", |(_, l)| l);
+        let rows: [(&str, String, &str); SETTING_ROWS] = [
+            ("Sounds", if s.sounds { "On" } else { "Off" }.into(), ""),
+            ("Volume", format!("{}%", s.volume), ""),
+            ("Pop-ups appear", if s.popups == "top" { "At the top" } else { "At the bottom" }.into(), ""),
+            ("Unlock screenshots", if s.screenshots { "On" } else { "Off" }.into(), "A picture of the moment you earn each achievement"),
+            ("Panel shortcut", hotkey.into(), "Takes effect next time a game starts"),
+            ("Dashboard design", skin.name().into(), ""),
+        ];
+        let (row_h, gap) = (54.0, 8.0);
+        let size = [620.0f32.min(width - 40.0), 96.0 + SETTING_ROWS as f32 * (row_h + gap) + 44.0];
+        let min = [origin[0] + (width - size[0]) / 2.0, origin[1] + (height - size[1]) / 2.0 + (1.0 - t) * 30.0];
+        let max = [min[0] + size[0], min[1] + size[1]];
+        let mouse = ui.io().mouse_pos;
+        let clicked = ui.is_mouse_clicked(MouseButton::Left);
+        let mut change = None;
+        let dl = ui.get_window_draw_list();
+        dl.add_rect(origin, [origin[0] + width, origin[1] + height], [0.0, 0.0, 0.0, 0.55 * t]).filled(true).build();
+        dl.add_rect([min[0], min[1] + 6.0], [max[0], max[1] + 10.0], [0.0, 0.0, 0.0, 0.35 * t]).filled(true).rounding(16.0).build();
+        gradient(&dl, min, max, [0.13, 0.16, 0.20, 0.97 * t], [0.06, 0.08, 0.10, 0.97 * t]);
+        dl.add_rect(min, max, with_alpha(GREEN, 0.85 * t)).rounding(14.0).thickness(2.0).build();
+        {
+            let _f = ui.push_font(fonts.title);
+            dl.add_text([min[0] + 28.0, min[1] + 24.0], col(with_alpha(WHITE, t)), "Settings");
+        }
+        for (i, (label, value, note)) in rows.iter().enumerate() {
+            let a = [min[0] + 20.0, min[1] + 76.0 + i as f32 * (row_h + gap)];
+            let b = [max[0] - 20.0, a[1] + row_h];
+            let hover = mouse[0] >= a[0] && mouse[0] < b[0] && mouse[1] >= a[1] && mouse[1] < b[1];
+            if hover && ui.io().mouse_delta != [0.0, 0.0] {
+                self.settings_row = Some(i);
+            }
+            if hover && clicked {
+                change = Some(i);
+            }
+            let on = self.anim.to(("setting", i), (sel == i) as u8 as f32, 16.0, 0.0);
+            dl.add_rect(a, b, [1.0, 1.0, 1.0, (0.05 + 0.10 * on) * t]).filled(true).rounding(10.0).build();
+            if on > 0.01 {
+                dl.add_rect(a, b, with_alpha(GREEN_LIGHT, on * t)).rounding(10.0).thickness(2.0).build();
+            }
+            let _f = ui.push_font(fonts.body);
+            let ty = if note.is_empty() { a[1] + (row_h - ui.text_line_height()) / 2.0 } else { a[1] + 7.0 };
+            dl.add_text([a[0] + 16.0, ty], col(with_alpha(WHITE, t)), label);
+            if !note.is_empty() {
+                dl.add_text([a[0] + 16.0, ty + 22.0], col([1.0, 1.0, 1.0, 0.5 * t]), note);
+            }
+            let v = format!("<  {value}  >");
+            let w = ui.calc_text_size(&v)[0];
+            dl.add_text([b[0] - 16.0 - w, a[1] + (row_h - ui.text_line_height()) / 2.0], col(with_alpha(if on > 0.5 { GREEN_LIGHT } else { WHITE }, t)), &v);
+        }
+        {
+            let _f = ui.push_font(fonts.body);
+            let hint = "Up/down choose  ·  left/right or A change  ·  B back";
+            let w = ui.calc_text_size(hint)[0];
+            dl.add_text([min[0] + (size[0] - w) / 2.0, max[1] - 34.0], col([1.0, 1.0, 1.0, 0.55 * t]), hint);
+        }
+        if let Some(i) = change {
+            self.settings_row = Some(i);
+            self.change_setting(i, 1, &profile.settings, skin);
+        }
+    }
+
     /// Call when the panel opens: everything animates in afresh.
     pub fn opened(&mut self) {
         self.anim.reset();
@@ -188,6 +312,10 @@ impl Panel {
             return;
         }
         crate::sound::play(crate::sound::Sfx::Move);
+        if let Some(row) = self.settings_row.as_mut() {
+            *row = (*row as i64 + delta as i64).clamp(0, SETTING_ROWS as i64 - 1) as usize;
+            return;
+        }
         match (self.blade(), &self.open_game) {
             (Blade::NowPlaying, _) => self.now.navigate(delta),
             (Blade::Games, Some(_)) => self.opened.navigate(delta),
@@ -258,6 +386,12 @@ impl Panel {
             Some(t) if themed_blades => t,
             _ => fonts,
         };
+        // The Settings screen takes the controls while it's open.
+        let in_settings = self.settings_row.is_some();
+        if in_settings {
+            self.settings_input(keys, pad, &profile.settings, skin);
+        }
+        let (keys, pad) = if in_settings { (0, 0) } else { (keys, pad) };
         if keys & KEY_Q != 0 || pad & PAD_LB != 0 {
             self.switch(-1);
         }
@@ -277,6 +411,7 @@ impl Panel {
             match self.blade() {
                 Blade::NowPlaying => self.now.cycle_filter(),
                 Blade::Games if in_game_list => self.opened.cycle_filter(),
+                Blade::Home => self.open_settings(),
                 _ => {}
             }
         }
@@ -301,7 +436,10 @@ impl Panel {
             self.close_game();
         }
         // While a game's list is open, B/Esc mean "back", not "close".
-        input::MODAL.store(self.blade() == Blade::Games && self.open_game.is_some(), Ordering::Relaxed);
+        input::MODAL.store((self.blade() == Blade::Games && self.open_game.is_some()) || self.settings_row.is_some(), Ordering::Relaxed);
+        if self.settings_row.is_some() && self.shown_blade.is_some_and(|b| b != self.blade()) {
+            self.settings_row = None;
+        }
 
         // Blade change: remember the direction for the slide.
         if self.shown_blade != Some(self.blade()) {
@@ -388,6 +526,7 @@ impl Panel {
                             self.inside(ui, fonts, media, game, profile, keys, pad, origin, width, height, layout);
                         }
                     }
+                    self.draw_settings(ui, fonts, profile, skin, origin, width, height);
                 })
             });
         scale_panel(corner, f);
@@ -829,16 +968,19 @@ impl Panel {
         let lx = area.left + 40.0;
         let rx = area.right - 40.0;
         let g = 24.0;
+        let in_settings = self.settings_row.is_some();
         let a_label = match self.blade() {
+            _ if in_settings => Some("Change"),
             Blade::Home => Some("Select"),
             Blade::Games if !in_game_list => Some("Open"),
             Blade::Requests => Some("Select"),
             _ => None,
         };
-        let b_label = if in_game_list { "Back" } else { "Close" };
+        let b_label = if in_game_list || in_settings { "Back" } else { "Close" };
+        let home = self.blade() == Blade::Home && !in_settings;
         // Left: Y (design) above, X (filter) below and to the left.
         glyph(ui, fonts, [lx + g * 0.85, y + g / 2.0], "Y", true, Some("Design"), false);
-        glyph(ui, fonts, [lx, y + g * 1.75], "X", list_open, list_open.then_some("Filter"), false);
+        glyph(ui, fonts, [lx, y + g * 1.75], "X", list_open || home, if home { Some("Settings") } else { list_open.then_some("Filter") }, false);
         // Right: B above, A below and to the right; labels on the left.
         glyph(ui, fonts, [rx - g * 0.85, y + g / 2.0], "B", true, Some(b_label), true);
         glyph(ui, fonts, [rx, y + g * 1.75], "A", a_label.is_some(), a_label, true);
@@ -984,13 +1126,17 @@ impl Panel {
         let cmin = [origin[0] + pad_x, origin[1] + top];
         let content = [(width - pad_x * 2.0).max(1.0), height - top - footer];
         ui.set_cursor_screen_pos([cmin[0] + slide, cmin[1]]);
+        let in_settings = self.settings_row.is_some();
         ui.child_window("##ah_content").size(content).build(|| {
+            if in_settings {
+                return; // (Settings draws over this; its rows take the clicks.)
+            }
             child(|| {
                 fade(bt, || match self.blade() {
                     Blade::Home if skin() == Skin::Blades => self.home_blades(ui, fonts, media, game, profile, keys, pad),
                     Blade::Home => self.home(ui, fonts, media, game, profile),
                     Blade::NowPlaying => match game.and_then(|g| profile.games.get(g.id()).map(|s| (g, s))) {
-                        Some((g, summary)) => self.now.draw(ui, fonts, media, summary, profile, &g.full_title()),
+                        Some((g, summary)) => self.now.draw(ui, fonts, media, summary, profile, &g.full_title(), Some(&g.progress)),
                         None => empty(ui, fonts, "No achievements for this game yet."),
                     },
                     Blade::Games => self.games(ui, fonts, media, game, profile),
@@ -1014,6 +1160,8 @@ impl Panel {
         button_hint(ui, fonts, "RB", "Switch");
         if list_open {
             button_hint(ui, fonts, "X", "Filter");
+        } else if self.blade() == Blade::Home && self.settings_row.is_none() {
+            button_hint(ui, fonts, "X", "Settings");
         }
         button_hint(ui, fonts, "Y", "Design");
         let keys_hint = match (list_open, self.blade() == Blade::Games && !in_game_list) {
@@ -1030,11 +1178,12 @@ impl Panel {
         }
         let mut right: Vec<(&str, &str)> = Vec::new();
         match self.blade() {
+            _ if self.settings_row.is_some() => right.push(("A", "Change")),
             Blade::Games if !in_game_list => right.push(("A", "Open")),
             Blade::Requests => right.push(("A", "Select")),
             _ => {}
         }
-        right.insert(0, ("B", if in_game_list { "Back" } else { "Close" }));
+        right.insert(0, ("B", if in_game_list || self.settings_row.is_some() { "Back" } else { "Close" }));
         let total: f32 = right.iter().map(|(b, l)| button_hint_width(ui, fonts, b, l)).sum();
         ui.set_cursor_screen_pos([origin[0] + width - pad_x - total + 22.0, fy]);
         for (b, l) in right {
@@ -1403,7 +1552,7 @@ impl Panel {
         // ── Right: menu with icons, then the game tile ──
         let activate = keys & KEY_ENTER != 0 || pad & PAD_A != 0;
         let design = skin().name();
-        let items: [(&str, String); 4] = [
+        let items: [(&str, String); 5] = [
             ("now", match game {
                 Some(g) => format!("Now Playing: {}", g.title()),
                 None => "Now Playing".to_string(),
@@ -1411,8 +1560,9 @@ impl Panel {
             ("games", "My Games".to_string()),
             ("request", "Request a Game".to_string()),
             ("design", format!("Dashboard Design: {design}")),
+            ("settings", "Settings".to_string()),
         ];
-        let row_h = 64.0;
+        let row_h = 56.0;
         let mut y = o[1];
         let mut chosen = None;
         for (k, (kind, label)) in items.iter().enumerate() {
@@ -1440,6 +1590,7 @@ impl Panel {
                         None => emblem(&dl, ic, [ic[0] + 48.0, ic[1] + 48.0], [0.3, 0.38, 0.48, 1.0], true),
                     },
                     "request" => emblem(&dl, ic, [ic[0] + 48.0, ic[1] + 48.0], [0.25, 0.45, 0.80, 1.0], true),
+                    "settings" => emblem(&dl, ic, [ic[0] + 48.0, ic[1] + 48.0], [0.45, 0.48, 0.52, 1.0], true),
                     _ => {
                         let (a, b) = (ic, [ic[0] + 48.0, ic[1] + 48.0]);
                         gradient(&dl, a, b, BLADE_TOP, BLADE_BOTTOM);
@@ -1459,13 +1610,13 @@ impl Panel {
         let tmax = [right_x + right_w, o[1] + avail[1]];
         ui.set_cursor_screen_pos(tmin);
         if ui.invisible_button("##home_tile", [right_w, (tmax[1] - tmin[1]).max(1.0)]) {
-            self.home_sel = 4;
-            chosen = Some(4);
+            self.home_sel = 5;
+            chosen = Some(5);
         }
         if ui.is_item_hovered() {
-            self.home_sel = 4;
+            self.home_sel = 5;
         }
-        let tsel = self.anim.to(("home_item", 4usize), (self.home_sel == 4) as u8 as f32, 14.0, 0.0);
+        let tsel = self.anim.to(("home_item", 5usize), (self.home_sel == 5) as u8 as f32, 14.0, 0.0);
         {
             let dl = ui.get_window_draw_list();
             dl.add_rect(tmin, tmax, [0.0, 0.0, 0.0, 0.22]).filled(true).rounding(10.0).build();
@@ -1493,7 +1644,11 @@ impl Panel {
         // Act on A / Enter / click.
         let pick = chosen.or_else(|| activate.then_some(self.home_sel));
         match pick {
-            Some(0) | Some(4) => self.blade = Some(Blade::NowPlaying),
+            Some(0) | Some(5) => self.blade = Some(Blade::NowPlaying),
+            Some(4) => {
+                self.open_settings();
+                return;
+            }
             Some(1) => self.blade = Some(Blade::Games),
             Some(2) => self.blade = Some(Blade::Requests),
             Some(3) => self.skin_request = Some(skin().next()),
@@ -1905,7 +2060,7 @@ impl Panel {
             }
             ui.set_cursor_screen_pos([start[0] + (1.0 - t) * 40.0, start[1] + 38.0]);
             let title = summary.full_title();
-            fade(t, || ui.group(|| self.opened.draw(ui, fonts, media, summary, profile, &title)));
+            fade(t, || ui.group(|| self.opened.draw(ui, fonts, media, summary, profile, &title, game.filter(|g| g.id() == summary.id).map(|g| &g.progress))));
             return;
         }
 

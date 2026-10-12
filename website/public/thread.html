@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${i > 0 && d.can.answer ? `<button class="linkbtn" data-answer="${t.answer === p.id ? '' : p.id}">${t.answer === p.id ? 'Unmark answer' : 'Mark as answer'}</button>` : ''}
             ${p.mine || d.can.admin ? `<button class="linkbtn" data-edit="${p.id}">Edit</button>` : ''}
             ${(p.mine || d.can.admin) && i > 0 ? `<button class="linkbtn" data-del="${p.id}">Delete</button>` : ''}
+            ${!p.mine ? `<button class="report-link" data-report="${p.id}">Report</button>` : ''}
           </div>
         </div>
       </div>`;
@@ -70,6 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('#t').addEventListener('click', async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     const act = async (fn) => { try { await fn(); await load(); } catch (err) { alert(err.message); } };
+    if (b.dataset.report) return report('post', b.dataset.report);
     if (b.dataset.react) return act(() => api(`/forum/posts/${b.dataset.react}/react`, { method: 'POST', body: { emoji: b.dataset.e } }));
     if (b.dataset.pick) {
       if (!(await me())) return (location.href = 'login.html?next=' + encodeURIComponent(location.pathname + location.search));

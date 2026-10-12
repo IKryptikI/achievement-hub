@@ -13,6 +13,9 @@ kind = "gamebryo-fallout3"
 quest_vtable = 0xb77c80   # TESQuest vtable, relative to the exe
 player_rva = 0xe24884     # pointer to the player, relative to the exe
 misc_stats_rva = 0xe23230 # Pip-Boy general stats (pointers), relative to the exe
+# The game's scripts still call AddAchievement (a no-op in the Steam build); catch it.
+catch_add_achievement = true
+extract_args_rva = 0x387530
 
 [[build]]
 exe = "Fallout3.exe"
@@ -372,6 +375,8 @@ id = "weaponsmith"
 name = "Weaponsmith"
 description = "Made one of every custom weapon"
 points = 30
+[[achievement.when]]
+award = 40
 
 [[achievement]]
 id = "doesn_t_play_well_with_others"
@@ -441,6 +446,8 @@ id = "the_bigger_they_are"
 name = "The Bigger They Are…"
 description = "Kill all the Super Mutant Behemoths"
 points = 20
+[[achievement.when]]
+award = 48
 
 [[achievement]]
 id = "yes_i_play_with_dolls"
@@ -489,6 +496,8 @@ id = "alien_archivist"
 name = "Alien Archivist"
 description = "Collected all Alien Captive Recordings"
 points = 20
+[[achievement.when]]
+award = 72
 
 [[achievement]]
 id = "the_local_flavor"
@@ -519,6 +528,8 @@ id = "bog_walker"
 name = "Bog Walker"
 description = "Discovered all locations within Point Lookout"
 points = 40
+[[achievement.when]]
+award = 68
 
 [[achievement]]
 id = "death_from_above"
@@ -609,6 +620,8 @@ id = "mill_worker"
 name = "Mill Worker"
 description = "Found All 100 Steel Ingots"
 points = 20
+[[achievement.when]]
+award = 58
 
 [[achievement]]
 id = "aiding_the_outcasts"

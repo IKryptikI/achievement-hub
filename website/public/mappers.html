@@ -43,6 +43,7 @@
     <label for="notes">Anything else?</label><textarea id="notes" rows="2" maxlength="1000"></textarea>
     <input id="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
     <label style="display:flex;gap:10px;align-items:flex-start;color:var(--text)"><input type="checkbox" id="consent" style="margin-top:5px"> I agree to be contacted about mapping at the email (and Discord) above. You can ask us to delete your details at any time.</label>
+    <div class="human" id="human"></div>
     <div id="msg"></div>
     <p style="margin-top:16px"><button class="btn primary">Send application <span class="arrow">→</span></button></p>
   </form>
@@ -53,13 +54,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const m = await me();
   if (m && m.email) $('#email').value = m.email;
   if (m) $('#name').value = m.gamertag;
+  const check = await humanCheck($('#human'));
   $('#f').addEventListener('submit', async (e) => {
     e.preventDefault();
     const v = (id) => $('#' + id).value;
     try {
-      await api('/mappers', { method: 'POST', body: { name: v('name'), email: v('email'), discord: v('discord'), platform: v('platform'), games: v('games'), experience: v('experience'), hours: v('hours'), notes: v('notes'), website: v('website'), consent: $('#consent').checked } });
+      await api('/mappers', { method: 'POST', body: { name: v('name'), email: v('email'), discord: v('discord'), platform: v('platform'), games: v('games'), experience: v('experience'), hours: v('hours'), notes: v('notes'), website: v('website'), consent: $('#consent').checked, turnstile: check.token() } });
       $('#f').innerHTML = '<h2>Thanks! 🎉</h2><p>Your application is in. We\'ll reach out by email soon. In the meantime you can turn on <b>Help map achievements</b> in the app and try record mode.</p>';
-    } catch (err) { note($('#msg'), err.message); }
+    } catch (err) { note($('#msg'), err.message); check.reset(); }
   });
 });
 </script>

@@ -47,6 +47,25 @@ static SOUNDS: OnceLock<Vec<Vec<u8>>> = OnceLock::new();
 /// The Blades theme pack's sounds (None where it has none).
 static THEME: OnceLock<Vec<Option<Vec<u8>>>> = OnceLock::new();
 static ENABLED: AtomicBool = AtomicBool::new(true);
+/// Volume in percent, and the sounds scaled to it (kept alive for good:
+/// PlaySound reads them while playing; volume changes are rare).
+static VOLUME: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(100);
+static SCALED: std::sync::Mutex<Option<(u8, &'static [Vec<u8>], &'static [Option<Vec<u8>>])>> = std::sync::Mutex::new(None);
+
+/// Sounds on or off, from the Settings screen.
+pub fn set_enabled(on: bool) {
+    ENABLED.store(on, Ordering::Relaxed);
+}
+
+/// Volume (percent), from the Settings screen.
+pub fn set_volume(percent: u8) {
+    VOLUME.store(percent.clamp(5, 100), Ordering::Relaxed);
+}
+
+/// A 16-bit PCM WAV at `percent` volume (other formats unchanged).
+fn scaled(wav: &[u8], percent: u8) -> Vec<u8> {
+    scale_pcm(wav.to_vec(), percent as f32 / 100.0)
+}
 
 /// Loads the player's own sounds where present, synthesising the rest.
 /// Returns the names of the ones replaced.
@@ -98,7 +117,24 @@ pub fn play(sfx: Sfx) {
     let themed = (crate::ui::theme::skin() == crate::ui::theme::Skin::Blades)
         .then(|| THEME.get().and_then(|t| t[i].as_ref()))
         .flatten();
-    let bytes = themed.unwrap_or(&sounds[i]);
+    let mut bytes: &[u8] = themed.unwrap_or(&sounds[i]);
+    let vol = VOLUME.load(Ordering::Relaxed);
+    if vol < 100 {
+        if let Ok(mut cache) = SCALED.lock() {
+            if cache.as_ref().is_none_or(|(v, ..)| *v != vol) {
+                let plain: &'static [Vec<u8>] = Box::leak(sounds.iter().map(|w| scaled(w, vol)).collect::<Vec<_>>().into_boxed_slice());
+                let theme: &'static [Option<Vec<u8>>] =
+                    Box::leak(THEME.get().map(|t| t.iter().map(|w| w.as_ref().map(|w| scaled(w, vol))).collect::<Vec<_>>()).unwrap_or_default().into_boxed_slice());
+                *cache = Some((vol, plain, theme));
+            }
+            if let Some((_, plain, theme)) = *cache {
+                bytes = match themed {
+                    Some(_) => theme.get(i).and_then(|t| t.as_deref()).unwrap_or(&plain[i]),
+                    None => &plain[i],
+                };
+            }
+        }
+    }
     // SAFETY: the WAV bytes live in a static for the life of the process,
     // as SND_MEMORY | SND_ASYNC requires.
     unsafe {
@@ -108,7 +144,12 @@ pub fn play(sfx: Sfx) {
 
 /// Turns a 16-bit PCM WAV down to about half volume (console UI sounds are
 /// mastered loud for TV speakers); other formats are left as they are.
-fn quieter(mut wav: Vec<u8>) -> Vec<u8> {
+fn quieter(wav: Vec<u8>) -> Vec<u8> {
+    scale_pcm(wav, 0.5)
+}
+
+/// A 16-bit PCM WAV with its samples scaled by `gain`.
+fn scale_pcm(mut wav: Vec<u8>, gain: f32) -> Vec<u8> {
     let find = |id: &[u8], wav: &[u8]| -> Option<(usize, usize)> {
         let mut p = 12;
         while p + 8 <= wav.len() {
@@ -128,7 +169,7 @@ fn quieter(mut wav: Vec<u8>) -> Vec<u8> {
     }
     if let Some((data, len)) = find(b"data", &wav) {
         for c in wav[data..data + len].chunks_exact_mut(2) {
-            let v = (i16::from_le_bytes([c[0], c[1]]) as f32 * 0.5) as i16;
+            let v = (i16::from_le_bytes([c[0], c[1]]) as f32 * gain) as i16;
             c.copy_from_slice(&v.to_le_bytes());
         }
     }

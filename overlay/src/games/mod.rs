@@ -3,6 +3,7 @@
 //! Each file describes one game build: how to recognise its exe, and its
 //! achievements as memory conditions. See `definitions/README.md`.
 
+pub mod award;
 pub mod rules;
 
 use rules::{Condition, Memory};
@@ -138,6 +139,8 @@ pub struct Game {
     achievements: Vec<Achievement>,
     dir: PathBuf,
     memory: Memory,
+    /// Counting achievements: (now, target), refreshed every poll.
+    pub progress: std::collections::HashMap<String, (i64, i64)>,
 }
 
 impl Game {
@@ -243,6 +246,8 @@ impl Game {
     pub fn poll(&mut self) -> Vec<usize> {
         self.memory.begin_poll();
         let mem = &mut self.memory;
+        // Counting achievements: how far along each is (for the list).
+        self.progress = self.achievements.iter().filter_map(|a| Some((a.id.clone(), a.when.iter().find_map(|c| c.progress(mem))?))).collect();
         let met: Vec<bool> = self
             .achievements
             .iter()
@@ -340,6 +345,15 @@ fn detect_inner(dirs: &[PathBuf], log: &dyn Fn(&str), any_build: bool) -> Option
             file.achievement.len(),
             file.game.title
         ));
+        // Achievements the game's own scripts award (Fallout 3).
+        if let Some(e) = &file.engine {
+            if e.catch_add_achievement && !any_build {
+                match award::install("AddAchievement", e.extract_args_rva) {
+                    Ok(m) => log(&format!("engine: {m}")),
+                    Err(m) => log(&format!("engine: couldn't catch AddAchievement ({m}); those achievements won't unlock")),
+                }
+            }
+        }
         return Some(Game {
             id: file.game.id,
             title: file.game.title,
@@ -356,6 +370,7 @@ fn detect_inner(dirs: &[PathBuf], log: &dyn Fn(&str), any_build: bool) -> Option
             // (Hand-made icons sit next to the installed copies.)
             dir: dirs.last().cloned().unwrap_or_default(),
             memory: Memory::with_engine(file.engine),
+            progress: std::collections::HashMap::new(),
         });
     }
     None

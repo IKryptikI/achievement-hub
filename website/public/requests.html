@@ -28,6 +28,7 @@
     </div>
     <textarea id="notes" rows="2" maxlength="500" placeholder="Anything we should know? (optional)" style="margin-top:10px"></textarea>
     <input id="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+    <div class="human" id="human"></div>
     <div id="msg"></div>
     <p style="margin:12px 0 0"><button class="btn primary">Request it</button></p>
   </form>
@@ -55,11 +56,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (t) { tab = t.dataset.t; draw(); }
     if (v) { if (!m) return (location.href = 'login.html?next=requests.html'); try { await api(`/requests/${v.dataset.vote}/vote`, { method: 'POST' }); load(); } catch (err) { note($('#msg'), err.message); } }
   });
+  const check = await humanCheck($('#human'));
   $('#f').addEventListener('submit', async (e) => {
     e.preventDefault();
-    try { await api('/requests', { method: 'POST', body: { title: $('#title').value, store: $('#store').value, notes: $('#notes').value, website: $('#website').value } });
-      $('#title').value = ''; $('#notes').value = ''; note($('#msg'), 'Requested! Your vote is in.', true); tab = 'open'; load(); }
-    catch (err) { note($('#msg'), err.message); }
+    try { await api('/requests', { method: 'POST', body: { title: $('#title').value, store: $('#store').value, notes: $('#notes').value, website: $('#website').value, turnstile: check.token() } });
+      $('#title').value = ''; $('#notes').value = ''; note($('#msg'), 'Requested! Your vote is in.', true); tab = 'open'; load(); check.reset(); }
+    catch (err) { note($('#msg'), err.message); check.reset(); }
   });
   load();
 });

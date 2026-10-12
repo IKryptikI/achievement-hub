@@ -50,6 +50,17 @@
     <p><button class="btn primary">Save profile</button> <a id="view" class="btn" href="#">View public profile</a></p>
   </form>
 
+  <h2 style="margin-top:36px" id="email">Email</h2>
+  <form id="ef" class="card">
+    <p style="margin-top:0">Private: only used to verify your account and reset your password. <span id="estatus"></span></p>
+    <div class="row">
+      <div style="flex:1;min-width:220px"><label for="em" style="margin-top:0">Email address</label><input id="em" type="email" required autocomplete="email"></div>
+      <div style="flex:1;min-width:200px"><label for="epw" style="margin-top:0">Your password (to confirm)</label><input id="epw" type="password" required autocomplete="current-password"></div>
+    </div>
+    <div id="emsg"></div>
+    <p style="margin-bottom:0"><button class="btn">Save email</button></p>
+  </form>
+
   <h2 style="margin-top:36px">Link the app</h2>
   <div class="card">
     <p>Connect the Achievement Hub app so your Gamerscore and unlocks show up here, and your friends show up in the overlay. In the app, open <b>Friends</b> and enter this code:</p>
@@ -143,6 +154,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   drawShow();
   $('#addshow')?.addEventListener('change', (e) => { const k = e.target.value; if (k && !showcase.includes(k) && showcase.length < 5) showcase.push(k); e.target.value = ''; drawShow(); });
   $('#show').addEventListener('click', (e) => { if (e.target.dataset.rm) { e.preventDefault(); showcase.splice(+e.target.dataset.rm, 1); drawShow(); } });
+  // Email.
+  const cfg = await siteConfig();
+  $('#em').value = m.email || '';
+  $('#estatus').innerHTML = !m.email ? '<span class="chip unmapped">Not set</span>'
+    : m.email_verified ? '<span class="chip confirmed">Verified</span>'
+    : cfg.email ? '<span class="chip testing">Not verified yet: enter the code from your inbox at the top of the page</span>' : '';
+  passwordField($('#epw'));
+  $('#ef').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await api('/me/email', { method: 'POST', body: { email: $('#em').value, password: $('#epw').value } });
+      note($('#emsg'), cfg.email ? 'Saved. We sent a code to that address; enter it in the bar at the top.' : 'Saved.', true);
+      setTimeout(() => location.reload(), 1500);
+    } catch (err) { note($('#emsg'), err.message); }
+  });
   $('#apps').textContent = m.apps_linked ? `Linked apps: ${m.apps_linked}.` : 'No app linked yet.';
 
   $('#prof').addEventListener('submit', async (e) => {

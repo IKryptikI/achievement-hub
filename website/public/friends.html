@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       : '';
     $('#list').innerHTML = by('friend').length
       ? by('friend').sort((a, b) => online(b) - online(a) || b.gamerscore - a.gamerscore).map((f) => person(f, `<button class="btn small" data-remove="${esc(f.gamertag)}">Remove</button>`)).join('')
-      : '<p class="muted">No friends yet. Add someone by their gamertag above.</p>';
+      : '<div class="card" style="grid-column:1/-1"><p class="muted" style="margin:0">No friends yet. Add someone by their gamertag above, or find people on the <a href="index.html">top players</a> list and in the <a href="forum.html">forum</a>.</p></div>';
     $('#sent').innerHTML = by('sent').length
       ? '<h2 style="margin-top:30px">Sent requests</h2><div class="grid">' + by('sent').map((f) => person(f, `<button class="btn small" data-remove="${esc(f.gamertag)}">Cancel</button>`)).join('') + '</div>'
       : '';
